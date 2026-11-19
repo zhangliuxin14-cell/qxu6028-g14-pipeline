@@ -1,57 +1,131 @@
-# G14 Pipeline — QXU6028 Virtual Lab 复现管道
+# G14 Pipeline — QXU6028 Virtual Labs L1–L3
 
-G14 组（数据集 `regular_G14`）的完整分析管道：L1 正向模型、L2 零维逆问题、L3 二维逆问题。
+Reproduction pipeline for the QXU6028 Polymer Devices coursework (group G14,
+dataset `regular_G14`). One command recomputes every number, table entry and
+figure in the report from the untouched data files.
 
-## 一键复现
+## Quick start
 
 ```bash
-python reproduce.py            # 常规数据 -> outputs/results.json + 5 张图
-python reproduce.py --check    # 内置验证检查
-python reproduce.py blind      # 盲测数据 -> outputs/blind_results.json
+pip install -r requirements.txt
+
+python reproduce.py                 # regular data  -> outputs/results.json
+python reproduce.py --check         # verification checks only, writes nothing
+python reproduce.py --dataset blind # blind data    -> outputs/blind_results.json
 ```
 
-要求：Python 3.10+（3.9 亦可用），依赖见 `requirements.txt`。
+`python reproduce.py blind` is accepted as well (same as `--dataset blind`).
+Requires Python 3.10+ (3.9 works too), numpy, pandas, matplotlib.
 
-## 目录结构
+The pipeline does not read anything outside the repository: the data folders
+under `data/` are byte-for-byte copies of the released group data and blind
+data, and `outputs/run_manifest.json` records their SHA-256 hashes so the
+copy can be checked against the release.
+
+## What a run produces
+
+| File | Contents |
+|---|---|
+| `outputs/results.json` | machine-readable results in the `QXU6028-results-v1` schema (both runs use the same writer) |
+| `outputs/blind_results.json` | the same for the blind data |
+| `outputs/run_log.txt`, `run_log_blind.txt` | full terminal transcript of the run, written by the pipeline itself |
+| `outputs/run_manifest.json` | UTC timestamp, Python/numpy/pandas versions, commit hash, seeds, input hashes |
+| `outputs/pipeline_commit.txt` | HEAD commit of the blind run (required by the blind-test instructions) |
+| `outputs/figures/*.png` | every figure used in the report |
+
+## Layout
 
 ```
 g14_pipeline/
-├── reproduce.py            # 一键管道（盲测时唯一允许改的是数据路径）
+├── reproduce.py            # the only entry point
 ├── requirements.txt
-├── data/regular_G14/       # 原始数据（勿改动）
+├── data/
+│   ├── results_template.json   # output schema, shared by both datasets
+│   ├── regular_G14/            # released group data (do not edit)
+│   └── blind_G14/              # released blind data (do not edit)
 ├── src/
-│   ├── common.py           # 常量与共享函数
-│   ├── l1.py               # L1 正向载流子计数
-│   ├── l2.py               # L2 零维逆问题 + bootstrap
-│   └── l3.py               # L3 正则化重建
-├── outputs/
-│   ├── results.json        # 机器可读结果（QXU6028-results-v1 schema）
-│   └── figures/            # 6 张图（L2 含 gate / model / trajectory；L3 含 map / method）
-└── docs/                   # checkpoint 记录、AI 账本/日志、自评、贡献声明
+│   ├── common.py           # constants, Fermi–Dirac, output paths
+│   ├── l1.py               # L1 forward carrier counting
+│   ├── l2.py               # L2 zero-dimensional inverse problem + bootstrap
+│   └── l3.py               # L3 regularised 2-D reconstruction
+├── outputs/                # results, logs, figures (regenerated, not hand-edited)
+├── checkpoints/            # L1 checkpoint package submitted in Session 3
+├── tools/contribution_report.py   # git-log based contribution table
+└── docs/                   # checkpoints, AI records, authorship, blind run record
 ```
 
-## 报告中容易出错的两处（已修正，勿回退）
+## Method summary
 
-1. **L3 特征必须来自去平面趋势的图**。晶圆级平面梯度的极值必然落在图角；直接取全图极值会把角点当缺陷（坐标恰为 ±2.7，即 `np.linspace` 的端值）。管道已分离趋势与局域缺陷，并由 `reproduce.py` 的检查守住。
-2. **L3 的 η 不能直接用 η₀**。η₀ 处残差是重复噪声的 12.8 倍（重建未拟合数据）；按差异原则取 η = 5.7e-2 η₀ 使残差 = 1.00 × 噪声。
+**L1.** Linear density of states g(E) = cE with c from `L1_params.json`;
+Fermi–Dirac at T = 300 K. The band-edge count integrates from E = 0, the
+Fermi-referenced count from E = E_F; C(E_F) = n_band / n_Fermi. Evaluated at
+the exact operating point, not at the nearest table row. The corrected
+mobility is n = 1/(e n_F ρ) with no extra 10^4 factor, because n[cm^-2] and
+ρ[Ω/sq] already give cm^2/Vs.
 
-## 关键数值（由管道生成，勿手改）
+**L2.** Repeats are averaged per index and the repeat scatter is kept as the
+error bar. R_H and R_xx are normalised separately so that the sign of R_H
+survives. Model library: ideal cone g = c|E| and hard gap g = 0 inside the gap,
+g = c(|E| - E_g/2) outside. Transport proxies for equal mobilities:
+R_s = 1/(n+p) and R_H = (p-n)/(n+p)^2, which vanishes at neutrality and has
+\|R_H\| ∝ R_s^2 wings, as the handbook gate requires. Nearest-curve fit over
+400 candidate E_F values; a hard gap is selected only if it lowers rms by 15%.
+Bootstrap: 200 resamples, seed 20260921.
 
-| 项目 | 值 |
+**L3.** SVD first: rank(A) = 92 of 100, so the null space is 8-dimensional, not
+the single constant mode the guide mentions. Reconstruct with first-difference
+Tikhonov regularisation, projection off the constant mode, and the
+discrepancy-principle regularisation parameter (largest η whose residual still
+matches the repeat noise). The wafer-scale planar trend and the local defects
+are separated before features are reported: the extremum of a planar trend
+always sits on the map boundary, so a boundary "feature" is the trend, not a
+defect. Resolution and detection limit are measured by injecting known
+single-pixel sources and adding noise-only vectors (500 draws, seed 20260921).
+
+## Verification built into the run
+
+`_validate()` in `reproduce.py` re-checks, on every run, the properties the
+guide asks for and a few that past bugs would break: L1 reference ratios
+(1.00 / 2.60 / 5.10), L2 curve topology (R_H crosses zero, R_s peaks there,
+wings scale as R_s^2), L2 trajectory structure, L3 null-space/row-sum
+conditions, L3 feature provenance (features must come from the detrended map,
+the dominant one must be interior), η inside the scanned range, and that
+`dataset_set` matches the folder actually read. A failed check exits non-zero,
+so a silent regression cannot pass unnoticed.
+
+## Key numbers (regenerate, never edit by hand)
+
+| Quantity | Value |
 |---|---|
-| L1 修正因子 C(E_F,op) | 2.8672 |
-| L1 修正载流子密度 | 3.727e11 cm⁻² |
-| L1 修正迁移率 | 3.824e4 cm²/Vs |
-| L2 模型 | cone（无能隙），E_g = 0 |
-| L2 残差 | r_cone = 0.0140（指南 400 点网格）；去网格量化后 0.0058 = 噪声的 0.43 倍 |
-| L2 费米轨迹 | −0.068 → +0.146 eV（中性点交叉 index 17→18）|
-| L3 决策 | **fail（clear）**，max\|m\| = 0.0456 > 0.030 |
-| L3 晶圆级梯度 | 6.03e-3 / 探针间距（x: −3.30e-3, y: −5.05e-3）|
-| L3 局域特征 | 正 +0.0179 @ (+0.3, +1.5)；负 −0.0142 @ (−0.9, −0.9)（均在内部）|
-| L3 η | 5.7e-2 × η₀（差异原则；η₀ 处残差 = 12.8 × 噪声）|
-| L3 分辨率 | 1.80 探针间距 |
-| L3 检测限 | 6.46e-5 |
+| L1 correction factor C(E_F,op) | 2.8672 |
+| L1 corrected sheet density | 3.727e11 cm^-2 |
+| L1 corrected mobility | 3.824e4 cm^2/Vs |
+| L2 model | cone (gapless), E_g = 0 |
+| L2 residual | 0.0140 on the guide's 400-point grid; 0.0058 after mesh refinement (0.43 x the repeat noise) |
+| L2 Fermi-level path | -0.068 -> +0.146 eV, neutrality between index 17 and 18 |
+| L3 decision | fail (clear): max\|m\| = 0.0456 > 0.030 |
+| L3 wafer-scale gradient | 6.03e-3 per probe pitch |
+| L3 local features | +0.0179 at (+0.3, +1.5); -0.0142 at (-0.9, -0.9) |
+| L3 regularisation | 5.7e-2 x η₀ (discrepancy principle) |
+| L3 resolution | 1.80 probe pitches |
+| L3 detection limit | 6.46e-5 |
 
-## 随机种子
+## Reproducibility notes
 
-所有随机步骤（L2 bootstrap 200 次、L3 噪声 500 次）使用固定种子 `20260921`，保证逐位可复现。
+- Every stochastic step uses the fixed seed 20260921: the L2 bootstrap (200
+  resamples) and the L3 noise draws (500 vectors). The seed is recorded in
+  `results.json` under `_meta.seeds` and in the run manifest.
+- `results.json` carries the commit that produced it (`pipeline_commit`). If
+  git is not installed on the marking machine, the value is read directly from
+  `.git/HEAD` instead of silently becoming `NO_GIT_REPO`.
+- L2 residual values are reported on the guide's 400-point E_F grid, because
+  that is the grid the assessment specifies. A convergence table (400 / 1600 /
+  6400 points) is stored in `_meta.L2.grid_convergence`; it shows the 400-point
+  residual is dominated by grid quantisation, not by model mismatch.
+
+## Records
+
+`docs/AUTHORSHIP.md` explains who wrote what and how that maps onto the commit
+history; `docs/BLIND_HISTORY.md` records the blind-test run; `docs/CHECKPOINTS.md`
+lists the per-session checkpoints; `docs/AI_error_ledger.md` and
+`docs/AI_usage_log.md` record AI assistance as the brief requires.
