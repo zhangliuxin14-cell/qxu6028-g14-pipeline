@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data" / "regular_G14"
 OUTPUT_DIR = ROOT / "outputs"
 FIG_DIR = OUTPUT_DIR / "figures"
-RESULTS_TEMPLATE = DATA_DIR / "results_template.json"
+RESULTS_TEMPLATE = ROOT / "data" / "results_template.json"
 
 # ---------------------------------------------------------------------------
 # Physical constants (guide p.3)
