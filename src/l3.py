@@ -125,14 +125,24 @@ def _ramp_detrend(m: np.ndarray) -> Tuple[np.ndarray, float, float]:
 def _merge_features(m: np.ndarray) -> List[Dict]:
     """Largest positive and negative localised features, merged over neighbours.
 
-    The global extremum of each sign is taken as the feature peak; neighbours
-    of the same sign and at least half the peak magnitude are merged into that
-    one feature (guide p.11: one feature per defect, not one per pixel). The
+    The extremum of each sign is taken as the feature peak; neighbours of the
+    same sign and at least half the peak magnitude are merged into that one
+    feature (guide p.11: one feature per defect, not one per pixel). The
     half-height cutoff keeps broad plateaus from swallowing the whole map, the
     same convention used for the resolution FWHM. Coordinates are pixel centres
     in probe pitches.
+
+    Candidates are restricted to interior pixels. Even after the planar trend
+    is removed, a residual edge curvature makes the outermost row or column the
+    largest of its sign, and a feature that touches the boundary cannot be told
+    apart from the wafer-scale trend -- which is the artefact the demonstrator
+    flagged. A localised defect is interior by definition at the resolution we
+    can claim.
     """
     flat = m.ravel()
+    interior = np.zeros(NPIX * NPIX, dtype=bool)
+    interior.reshape(NPIX, NPIX)[1:-1, 1:-1] = True
+    interior_flat = np.where(interior, flat, np.nan)
     feats: List[Dict] = []
 
     def _component_peak(seed: int, floor: float) -> List[int]:
@@ -153,7 +163,8 @@ def _merge_features(m: np.ndarray) -> List[Dict]:
         return sorted(seen)
 
     for sign in ("positive", "negative"):
-        seed = int(np.argmax(flat)) if sign == "positive" else int(np.argmin(flat))
+        seed = (int(np.nanargmax(interior_flat)) if sign == "positive"
+                else int(np.nanargmin(interior_flat)))
         amp = float(flat[seed])
         comp = _component_peak(seed, 0.5 * abs(amp))
         ci, cj = divmod(seed, NPIX)

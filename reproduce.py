@@ -182,6 +182,10 @@ def _validate(out):
     checks.append(("L3 dominant feature is interior, not on the map edge",
                    0 < _dom["pixel"][0] < _l3m["npix"] - 1
                    and 0 < _dom["pixel"][1] < _l3m["npix"] - 1))
+    checks.append(("L3 every reported feature is interior",
+                   all(0 < f["pixel"][0] < _l3m["npix"] - 1
+                       and 0 < f["pixel"][1] < _l3m["npix"] - 1
+                       for f in L3["features"])))
     checks.append(("L3 feature peak below raw map extremum",
                    abs(_dom["amplitude"]) < _l3m["max_abs_map"]))
     checks.append(("L3 eta chosen inside the scanned range",
