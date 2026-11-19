@@ -328,7 +328,7 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
                 label=f"{f['sign']}: {f['amplitude']:+.4f} @ ({f['x']:+.1f},{f['y']:+.1f})")
     ax.set_xlabel("x (probe pitches)")
     ax.set_ylabel("y (probe pitches)")
-    ax.set_title("(b) planar trend removed: the localised features are interior")
+    ax.set_title("(b) planar trend removed:\nlocalised features are interior")
     ax.legend(loc="lower left", fontsize=8)
     plt.tight_layout()
     fig_map = common.figure_path("L3_map.png")
