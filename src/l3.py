@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from . import common
-from .common import FIG_DIR, OUTPUT_DIR
+from .common import OUTPUT_DIR
 
 NPIX = 10
 N = NPIX * NPIX
@@ -330,7 +330,7 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
     ax.set_title("(b) planar trend removed: the localised features are interior")
     ax.legend(loc="lower left", fontsize=8)
     plt.tight_layout()
-    fig_map = FIG_DIR / "L3_map.png"
+    fig_map = common.figure_path("L3_map.png")
     plt.savefig(fig_map, dpi=200)
     plt.close()
 
@@ -377,7 +377,7 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
     ax.set_xlabel("x (probe pitches)")
     ax.set_ylabel("y (probe pitches)")
     plt.tight_layout()
-    fig_method = FIG_DIR / "L3_method.png"
+    fig_method = common.figure_path("L3_method.png")
     plt.savefig(fig_method, dpi=200)
     plt.close()
 

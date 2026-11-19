@@ -16,6 +16,7 @@ Outputs
     outputs/run_log.txt           full terminal transcript of the run
     outputs/run_manifest.json     timestamp, versions, commit, data hashes
     outputs/figures/*.png         every figure quoted in the report
+    outputs/figures_blind/*.png   the same plots made from the blind dataset
 
 Environment: Python 3.10+, numpy, pandas, matplotlib.
 """
@@ -87,6 +88,11 @@ def run(dataset="regular"):
     from src.l3 import run_l3
 
     common.DATA_DIR = dataset_dir(dataset)
+    # The blind run gets its own figure folder.  Without this the two runs
+    # share outputs/figures and the second run silently overwrites the first
+    # run's plots while results.json still describes the first.
+    common.FIG_DIR = ROOT / "outputs" / (
+        "figures_blind" if dataset == "blind" else "figures")
     template = _load_template(common.RESULTS_TEMPLATE)
     assert template.get("schema_version") == "QXU6028-results-v1"
 
@@ -196,6 +202,18 @@ def _validate(out):
 
     checks.append(("dataset_set matches the requested dataset",
                    out.get("dataset_set") in ("regular", "blind")))
+
+    # Every figure must live in the folder belonging to this dataset.  The
+    # blind run used to share outputs/figures with the regular run, so the
+    # second run overwrote the first run's plots while its JSON still
+    # described them.
+    fig_dir = "figures_blind" if out.get("dataset_set") == "blind" else "figures"
+    fig_paths = [v for sect in ("L1", "L2", "L3")
+                 for k, v in out["_meta"][sect].items()
+                 if k.endswith("figure") and isinstance(v, str)]
+    checks.append((f"every recorded figure path is under {fig_dir}/",
+                   bool(fig_paths) and all(
+                       fig_dir + "/" in v.replace("\\", "/") for v in fig_paths)))
 
     for name, passed in checks:
         (ok if passed else bad).append(name)

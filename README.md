@@ -31,7 +31,8 @@ copy can be checked against the release.
 | `outputs/run_log.txt`, `run_log_blind.txt` | full terminal transcript of the run, written by the pipeline itself |
 | `outputs/run_manifest.json` | UTC timestamp, Python/numpy/pandas versions, commit hash, seeds, input hashes |
 | `outputs/pipeline_commit.txt` | HEAD commit of the blind run (required by the blind-test instructions) |
-| `outputs/figures/*.png` | every figure used in the report |
+| `outputs/figures/*.png` | every figure used in the report (regular data) |
+| `outputs/figures_blind/*.png` | the same six plots from the blind data — kept apart so a blind run cannot overwrite the figures the report quotes |
 
 ## Layout
 

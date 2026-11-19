@@ -2,7 +2,7 @@
 
 Brief requirement: at least one specific, verifiable error in AI-generated work,
 with how it was detected and corrected. A generic "the AI can be wrong" entry
-scores nothing; the entries below are the seven that actually happened, in the
+scores nothing; the entries below are the eight that actually happened, in the
 order they happened. Every number can be reproduced with the pipeline command
 given in the entry, and every fix is guarded by a check in reproduce.py
 _validate() so that the same mistake cannot silently return.
@@ -94,6 +94,19 @@ _validate() so that the same mistake cannot silently return.
 | Detection | Comparing the blind output with the regular output: identical L1 values to the last digit, which is impossible for an independent dataset. |
 | Correction | The modules import the module (from . import common) and read common.DATA_DIR inside the functions, so the run-time rebinding is seen. reproduce.py also records dataset_set in the results and _validate checks it, so a regular result can no longer be passed off as a blind one. |
 | Why it is in this ledger | This is the most dangerous class of AI error we met: a silent fallback that produces a plausible, green-ticking, wrong artefact. The fix is not just the import -- it is making the wrong state detectable, so the same mistake cannot pass review again. |
+
+## Entry 8 — the blind run overwrote the regular figures (2026-11-19)
+
+| | |
+|---|---|
+| Date | 2026-11-19 (Session 4, after the consolidation) |
+| Stage | src/l1.py, src/l2.py, src/l3.py figure paths; src/common.py FIG_DIR |
+| AI output | The lab modules used "from .common import FIG_DIR" and wrote to outputs/figures. reproduce.run() rebound DATA_DIR for the blind run but never rebound FIG_DIR. |
+| Symptom | outputs/figures held the blind plots while outputs/results.json described the regular data. The JSON was right; the pictures next to it were not. |
+| Detection | Opening the figures to write this report. Panel (a) of L2_model_fit printed r_cone = 0.0190 and "15% rule needs < 0.0162", while results.json said r_cone = 0.013962; L3_method printed "chosen: 0.0147x eta0" where the JSON said 0.05698. Two plots disagreed with the file they were supposed to illustrate. |
+| Why it is the same bug as entry 7 | Same mechanism one level down: a module-level constant bound at import, rebound at run time, and no check that the artefact came from the run that produced the JSON. Entry 7 was found by comparing two datasets; this one survived that comparison because only the figures collided, not the numbers. |
+| Correction | common.figure_path(name) resolves FIG_DIR at call time; run() sets common.FIG_DIR to outputs/figures or outputs/figures_blind; the blind figures are committed separately; and _validate now fails if any recorded figure path is not under the folder of the dataset that was run. |
+| Evidence that no number moved | Re-running both datasets after the fix changes pipeline_commit and six figure-path strings in the blind _meta, and pipeline_commit only in the regular results. git diff 7ed21d4 -- outputs/ shows exactly that. The reported physics is untouched; the provenance of the pictures is now correct. |
 
 ---
 

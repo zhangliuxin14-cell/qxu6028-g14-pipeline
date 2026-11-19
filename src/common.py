@@ -12,7 +12,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data" / "regular_G14"
 OUTPUT_DIR = ROOT / "outputs"
-FIG_DIR = OUTPUT_DIR / "figures"
+FIG_DIR = OUTPUT_DIR / "figures"   # rebound per dataset run, see reproduce.run()
 RESULTS_TEMPLATE = ROOT / "data" / "results_template.json"
 
 # ---------------------------------------------------------------------------
@@ -34,3 +34,16 @@ def fermi(E: np.ndarray, EF: float, T: float) -> np.ndarray:
 def setup_output_dirs() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
     FIG_DIR.mkdir(exist_ok=True)
+
+
+def figure_path(name: str) -> Path:
+    """Resolve a figure path at call time.
+
+    FIG_DIR is rebound per dataset run, so the blind run writes to
+    outputs/figures_blind and cannot overwrite the figures the report
+    quotes.  Importing FIG_DIR directly would bind the old directory at
+    import time -- the same trap that once made the blind run read the
+    regular data.
+    """
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    return FIG_DIR / name

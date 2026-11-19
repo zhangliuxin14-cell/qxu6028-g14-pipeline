@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from . import common
-from .common import E_CHARGE, EMAX, FIG_DIR, KB, NA, OUTPUT_DIR, fermi
+from .common import E_CHARGE, EMAX, KB, NA, OUTPUT_DIR, fermi
 
 
 def n_band(EF: float, T: float, c: float) -> float:
@@ -113,7 +113,7 @@ def run_l1() -> Dict:
     plt.legend(loc="upper left")
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    fig_path = FIG_DIR / "L1_correction_sweep.png"
+    fig_path = common.figure_path("L1_correction_sweep.png")
     plt.savefig(fig_path, dpi=200)
     plt.close()
 

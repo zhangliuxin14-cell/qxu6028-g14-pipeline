@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from . import common
-from .common import FIG_DIR, KB, NA, OUTPUT_DIR, fermi
+from .common import KB, NA, OUTPUT_DIR, fermi
 
 # grids (guide p.7)
 E_GRID = np.linspace(-2.5, 2.5, 4000)
@@ -232,7 +232,7 @@ def run_l2(n_boot: int = 200, seed: int = 20260921) -> Dict:
     plt.legend(loc="best")
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    fig_gate = FIG_DIR / "L2_gate.png"
+    fig_gate = common.figure_path("L2_gate.png")
     plt.savefig(fig_gate, dpi=200)
     plt.close()
 
@@ -366,7 +366,7 @@ def run_l2(n_boot: int = 200, seed: int = 20260921) -> Dict:
     axB.grid(alpha=0.3)
 
     plt.tight_layout()
-    fig_model = FIG_DIR / "L2_model_fit.png"
+    fig_model = common.figure_path("L2_model_fit.png")
     plt.savefig(fig_model, dpi=200)
     plt.close()
 
@@ -381,7 +381,7 @@ def run_l2(n_boot: int = 200, seed: int = 20260921) -> Dict:
     plt.legend(loc="best")
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    fig_traj = FIG_DIR / "L2_trajectory.png"
+    fig_traj = common.figure_path("L2_trajectory.png")
     plt.savefig(fig_traj, dpi=200)
     plt.close()
 

@@ -2,7 +2,7 @@
   "schema_version": "QXU6028-results-v1",
   "group": "G14",
   "dataset_set": "blind",
-  "pipeline_commit": "d41ce42c3db1d8b4164fd4be51161bcf21ae575d",
+  "pipeline_commit": "b9aad8a0f9b55060cf09b59620e76a4b2883ea96",
   "L1": {
     "correction_factor": 4.3627188846926215,
     "n_fermi_op_cm2": 643440837749.2031,
@@ -239,7 +239,7 @@
       "EF_C2_eV": 0.07265174803593437,
       "EF_C4_eV": 0.1573015811809581,
       "n_band_recompute_max_rel_err": 3.917851566039251e-12,
-      "figure": "figures\\L1_correction_sweep.png",
+      "figure": "figures_blind\\L1_correction_sweep.png",
       "T_K": 300.0,
       "EF_op_eV": 0.17150833976453722,
       "rho_ohm_sq": 435.2430335648759,
@@ -419,9 +419,9 @@
       "frac_hardgap": 0.0,
       "bootstrap_seed": 20260921,
       "bootstrap_n": 200,
-      "gate_figure": "figures\\L2_gate.png",
-      "model_figure": "figures\\L2_model_fit.png",
-      "trajectory_figure": "figures\\L2_trajectory.png"
+      "gate_figure": "figures_blind\\L2_gate.png",
+      "model_figure": "figures_blind\\L2_model_fit.png",
+      "trajectory_figure": "figures_blind\\L2_trajectory.png"
     },
     "L3": {
       "row_sum_max": 1.6653345369377348e-16,
@@ -618,8 +618,8 @@
         3,
         128
       ],
-      "map_figure": "figures\\L3_map.png",
-      "method_figure": "figures\\L3_method.png"
+      "map_figure": "figures_blind\\L3_map.png",
+      "method_figure": "figures_blind\\L3_method.png"
     },
     "seeds": {
       "l2_bootstrap": 20260921,
