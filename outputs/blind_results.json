@@ -2,7 +2,7 @@
   "schema_version": "QXU6028-results-v1",
   "group": "G14",
   "dataset_set": "blind",
-  "pipeline_commit": "f536ce80163c2df95d21e32b4bcee91de7a3c5ca",
+  "pipeline_commit": "d41ce42c3db1d8b4164fd4be51161bcf21ae575d",
   "L1": {
     "correction_factor": 4.3627188846926215,
     "n_fermi_op_cm2": 643440837749.2031,
@@ -192,17 +192,17 @@
       },
       {
         "sign": "negative",
-        "amplitude": -0.010909724296107613,
-        "x": 2.7,
-        "y": 2.7,
+        "amplitude": -0.004842150956963601,
+        "x": 2.1000000000000005,
+        "y": -1.5,
         "pixel": [
-          9,
-          9
+          2,
+          8
         ],
-        "n_pixels": 3,
+        "n_pixels": 15,
         "centroid_pixel": [
-          8.666666666666666,
-          8.666666666666666
+          2.0,
+          7.666666666666667
         ]
       }
     ],
@@ -598,7 +598,7 @@
         }
       ],
       "detrended_feature_peak_abs": 0.018347430335799973,
-      "features_all_interior": false,
+      "features_all_interior": true,
       "fwhm_centre_pitch": 1.6814410192465619,
       "fwhm_off_centre_pitch": 1.7634589417046804,
       "noise_seed": 20260921,
