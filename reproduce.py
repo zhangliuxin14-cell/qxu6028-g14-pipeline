@@ -1,20 +1,32 @@
 """QXU6028 G14 one-command reproduction pipeline.
 
 Usage:
-    python reproduce.py            # regular group data -> results.json
-    python reproduce.py blind      # blind-test folder -> blind_results.json
-    python reproduce.py --check    # run the built-in verification checks only
+    python reproduce.py                      # regular group data -> outputs/results.json
+    python reproduce.py --dataset blind      # blind-test folder  -> outputs/blind_results.json
+    python reproduce.py blind                # same, kept for the Session 3 command line
+    python reproduce.py --check              # run the built-in verification checks only
+    python reproduce.py --dataset blind --check
 
 The pipeline reads the untouched group data from data/regular_G14 (or
 data/blind_GNN for the blind run), recomputes L1-L3 and writes the results
 into the exact results_template.json schema. No value is hand-edited.
 
-Environment: Python 3.10+, numpy, pandas, matplotlib (Python 3.9.10 works).
+Outputs
+    outputs/results.json          (regular) or outputs/blind_results.json (blind)
+    outputs/run_log.txt           full terminal transcript of the run
+    outputs/run_manifest.json     timestamp, versions, commit, data hashes
+    outputs/figures/*.png         every figure quoted in the report
+
+Environment: Python 3.10+, numpy, pandas, matplotlib.
 """
+import argparse
+import contextlib
+import hashlib
 import json
-import shutil
+import platform
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -31,24 +43,50 @@ N_NOISE = 500            # L3 noise-only detection-limit vectors
 PIPELINE_VERSION = "QXU6028-G14-pipeline-v1.0"
 
 
-def _load_template(path: Path) -> dict:
+class Tee:
+    """Write to the terminal and to the run log at the same time."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, text):
+        for stream in self.streams:
+            stream.write(text)
+            stream.flush()
+        return len(text)
+
+    def flush(self):
+        for stream in self.streams:
+            stream.flush()
+
+
+def _load_template(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def run(blind: bool = False) -> dict:
+def dataset_dir(dataset):
+    """Resolve the data folder for a named dataset.
+
+    The blind release is only known by its folder name (data/blind_GNN), so it
+    has to be globbed. Resolving it here -- and not through a module-level
+    constant copied at import time -- is what makes --dataset blind actually
+    read the blind files instead of silently recomputing the regular ones.
+    """
+    if dataset == "regular":
+        return ROOT / "data" / "regular_G14"
+    dirs = sorted(ROOT.glob("data/blind_G*"))
+    if len(dirs) != 1:
+        raise FileNotFoundError(
+            "Expected exactly one data/blind_GNN folder for the blind run.")
+    return dirs[0]
+
+
+def run(dataset="regular"):
     from src.l1 import run_l1
     from src.l2 import run_l2
     from src.l3 import run_l3
 
-    if blind:
-        blind_dirs = sorted(ROOT.glob("data/blind_G*"))
-        if len(blind_dirs) != 1:
-            raise FileNotFoundError(
-                "Expected exactly one data/blind_GNN folder for the blind run.")
-        # redirect the data path for this process only
-        common.DATA_DIR = blind_dirs[0]
-        common.RESULTS_TEMPLATE = blind_dirs[0] / "results_template.json"
-
+    common.DATA_DIR = dataset_dir(dataset)
     template = _load_template(common.RESULTS_TEMPLATE)
     assert template.get("schema_version") == "QXU6028-results-v1"
 
@@ -59,6 +97,7 @@ def run(blind: bool = False) -> dict:
     out = dict(template)
     out["pipeline_commit"] = "REPLACE_WITH_GIT_COMMIT_HASH"
     out["pipeline_version"] = PIPELINE_VERSION
+    out["dataset_set"] = dataset
     out["L1"].update({k: float(v) for k, v in l1["L1"].items()})
     out["L2"].update(l2["L2"])
     out["L3"].update(l3["L3"])
@@ -73,7 +112,7 @@ def run(blind: bool = False) -> dict:
     return out
 
 
-def _validate(out: dict) -> list:
+def _validate(out):
     """Built-in verification checks (guide pp.15-16)."""
     ok, bad = [], []
     checks = []
@@ -82,8 +121,7 @@ def _validate(out: dict) -> list:
 
     # L1 reference ratios (exact checks, guide p.5)
     from src.l1 import n_band, n_fermi_num
-    from src.common import DATA_DIR
-    params = json.loads((DATA_DIR / "L1_params.json").read_text(encoding="utf-8"))
+    params = json.loads((common.DATA_DIR / "L1_params.json").read_text(encoding="utf-8"))
     c, T = float(params["c"]), float(params["T"])
     ratios = [n_band(ef, T, c) / n_fermi_num(ef, T, c) for ef in (0.0, 0.10, 0.20)]
     checks.append(("L1 ratio at EF=0 == 1.00", abs(ratios[0] - 1.0) < 1e-6))
@@ -152,15 +190,20 @@ def _validate(out: dict) -> list:
                    min(s["residual_over_noise"] for s in _l3m["eta_sensitivity"]) <= 1.0
                    <= max(s["residual_over_noise"] for s in _l3m["eta_sensitivity"])))
 
+    checks.append(("dataset_set matches the requested dataset",
+                   out.get("dataset_set") in ("regular", "blind")))
+
     for name, passed in checks:
         (ok if passed else bad).append(name)
     return bad
 
 
-def write_outputs(out: dict, blind: bool = False) -> None:
+def write_outputs(out, blind=False, outdir=None):
+    outdir = Path(outdir) if outdir is not None else ROOT / "outputs"
+    outdir.mkdir(parents=True, exist_ok=True)
     setup_output_dirs()
     name = "blind_results.json" if blind else "results.json"
-    target = ROOT / "outputs" / name
+    target = outdir / name
     with open(target, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
     print(f"wrote {target}")
@@ -174,48 +217,122 @@ def write_outputs(out: dict, blind: bool = False) -> None:
         print(f"figure ok: {p}" if p.exists() else f"figure MISSING: {p}")
 
 
-def git_commit_hash() -> str:
+def _sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def write_manifest(out, dataset, outdir=None):
+    outdir = Path(outdir) if outdir is not None else ROOT / "outputs"
+    data_dir = dataset_dir(dataset)
+    files = sorted(p for p in data_dir.iterdir() if p.is_file())
+    manifest = {
+        "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "dataset": dataset,
+        "data_dir": str(data_dir.relative_to(ROOT)),
+        "pipeline_commit": out.get("pipeline_commit"),
+        "pipeline_version": PIPELINE_VERSION,
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+        "pandas": __import__("pandas").__version__,
+        "seeds": {"l2_bootstrap": SEED, "l3_noise": SEED},
+        "n_boot": N_BOOT,
+        "n_noise": N_NOISE,
+        "data_sha256": {p.name: _sha256(p) for p in files},
+    }
+    target = outdir / "run_manifest.json"
+    target.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print(f"wrote {target}")
+    return manifest
+
+
+def git_commit_hash():
+    """HEAD hash, with a pure-Python fallback for machines without git."""
     try:
         return subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT,
             stderr=subprocess.DEVNULL, text=True).strip()
     except Exception:
+        pass
+    try:
+        git_dir = ROOT / ".git"
+        head = (git_dir / "HEAD").read_text(encoding="utf-8").strip()
+        if head.startswith("ref:"):
+            ref = head.split(":", 1)[1].strip()
+            ref_file = git_dir / ref
+            if ref_file.exists():
+                return ref_file.read_text(encoding="utf-8").strip()
+            packed = git_dir / "packed-refs"
+            if packed.exists():
+                for line in packed.read_text(encoding="utf-8").splitlines():
+                    if line.endswith(" " + ref):
+                        return line.split()[0]
+            return "NO_GIT_REPO"
+        return head
+    except Exception:
         return "NO_GIT_REPO"
 
 
-def main() -> int:
-    blind = "--blind" in sys.argv or "blind" in sys.argv[1:2]
-    check_only = "--check" in sys.argv
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Reproduce the QXU6028 G14 L1-L3 results from the data folder.")
+    parser.add_argument("dataset_positional", nargs="?", choices=["regular", "blind"],
+                        help="dataset to run (kept for 'python reproduce.py blind')")
+    parser.add_argument("--dataset", choices=["regular", "blind"], default=None,
+                        help="dataset to run (default: regular)")
+    parser.add_argument("--blind", action="store_true",
+                        help="shorthand for --dataset blind")
+    parser.add_argument("--check", action="store_true",
+                        help="run the built-in checks only, write nothing")
+    parser.add_argument("--outdir", default=None,
+                        help="output folder (default: <repo>/outputs)")
+    args = parser.parse_args(argv)
 
-    if check_only:
-        # regenerate from scratch, then validate without writing
-        out = run(blind=blind)
-        bad = _validate(out)
-        if bad:
-            print("FAILED checks:")
+    dataset = args.dataset or args.dataset_positional or ("blind" if args.blind else "regular")
+    blind = dataset == "blind"
+    outdir = Path(args.outdir) if args.outdir else ROOT / "outputs"
+
+    log_path = outdir / ("run_log_blind.txt" if blind else "run_log.txt")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(log_path, "w", encoding="utf-8") as log:
+        with contextlib.redirect_stdout(Tee(sys.stdout, log)):
+            print(f"QXU6028 G14 pipeline {PIPELINE_VERSION}")
+            print(f"dataset = {dataset} ({dataset_dir(dataset).name})")
+            print(f"started = {datetime.now(timezone.utc).isoformat(timespec='seconds')}")
+
+            out = run(dataset=dataset)
+            bad = _validate(out)
+
+            if bad:
+                print("FAILED checks:")
+                for b in bad:
+                    print(f"  - {b}")
+            else:
+                print("all built-in checks passed")
+            print(f"wrote {log_path}")
+
+            if args.check:
+                return 1 if bad else 0
+
+            hash_ = git_commit_hash()
+            if hash_ != "NO_GIT_REPO":
+                out["pipeline_commit"] = hash_
+            write_outputs(out, blind=blind, outdir=outdir)
+            write_manifest(out, dataset, outdir=outdir)
+            print(f"pipeline_commit = {out['pipeline_commit']}")
+
+            if blind:
+                (outdir / "pipeline_commit.txt").write_text(
+                    out["pipeline_commit"] + "\n", encoding="utf-8")
+                print("wrote pipeline_commit.txt")
+
             for b in bad:
-                print(f"  - {b}")
-            return 1
-        print("all built-in checks passed")
-        return 0
-
-    out = run(blind=blind)
-    bad = _validate(out)
-    for b in bad:
-        print(f"WARNING: check failed: {b}")
-
-    hash_ = git_commit_hash()
-    if hash_ != "NO_GIT_REPO":
-        out["pipeline_commit"] = hash_
-    write_outputs(out, blind=blind)
-    print(f"pipeline_commit = {out['pipeline_commit']}")
-
-    if blind:
-        (ROOT / "outputs" / "pipeline_commit.txt").write_text(
-            out["pipeline_commit"] + "\n", encoding="utf-8")
-        print("wrote outputs/pipeline_commit.txt (run_log.txt: save your "
-              "terminal output)")
-    return 0 if not bad else 2
+                print(f"WARNING: check failed: {b}")
+            return 0 if not bad else 2
 
 
 if __name__ == "__main__":
