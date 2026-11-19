@@ -1,0 +1,15 @@
+QXU6028 G14 pipeline QXU6028-G14-pipeline-v1.0
+dataset = blind (blind_G14)
+started = 2026-11-19T11:28:32+00:00
+all built-in checks passed
+wrote D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\run_log_blind.txt
+wrote D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\blind_results.json
+figure ok: D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\figures\L1_correction_sweep.png
+figure ok: D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\figures\L2_gate.png
+figure ok: D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\figures\L2_model_fit.png
+figure ok: D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\figures\L2_trajectory.png
+figure ok: D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\figures\L3_map.png
+figure ok: D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\figures\L3_method.png
+wrote D:\Polymer_Device_Coursework\submission\g14_pipeline\outputs\run_manifest_blind.json
+pipeline_commit = f536ce80163c2df95d21e32b4bcee91de7a3c5ca
+wrote pipeline_commit.txt

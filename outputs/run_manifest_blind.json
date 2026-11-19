@@ -1,0 +1,28 @@
+{
+  "generated_utc": "2026-11-19T11:28:41+00:00",
+  "dataset": "blind",
+  "data_dir": "data/blind_G14",
+  "pipeline_commit": "f536ce80163c2df95d21e32b4bcee91de7a3c5ca",
+  "pipeline_version": "QXU6028-G14-pipeline-v1.0",
+  "python": "3.12.14",
+  "numpy": "2.3.5",
+  "pandas": "3.0.1",
+  "seeds": {
+    "l2_bootstrap": 20260921,
+    "l3_noise": 20260921
+  },
+  "n_boot": 200,
+  "n_noise": 500,
+  "data_sha256": {
+    "blind_results.json": "6931b26fcf9beaffcb46e2e9c210be7893fa8b8dca6259f5d911852071e8233c",
+    "L1_data.csv": "ff9750a414227352558f0ed7b840441681a4b3f6b0d8359699da046a56700a51",
+    "L1_params.json": "448f9a60fa3c07e04b7468fc4caa26b3edd67a89d75b62f7b0f2eae5473c169d",
+    "L2_data.csv": "7f1b340dcae18e4d078d0039a705b16d01a1c22593369c16c77037e01645e8e4",
+    "L2_meta.json": "14c3293b937afd8643abaec80e8424fbd3f69530fdeb0ac4b5e944b7c6a91295",
+    "L3_A.npy": "4783c2c21d21c9c24d82be9b05a264331a9123b113785be3849398d8ee4d0cd5",
+    "L3_d.csv": "db573dc43f60a3a9742e9d8472bbc53fa329c52318e8a9b3a9a87150e437d917",
+    "L3_meta.json": "aa4c1b8113d700de1adcc8fc6c8ce1df7f1e24464bcdb60f0821cdb64507e3b1",
+    "manifest.json": "017f1643b67089393222cc74d9864d432b0fc6f76031102c15585d27cb6c19d6",
+    "README_FIRST.txt": "134ec418117337a58c5625ff969708bfdfeb3dbc2513b5cd169f6f4312eb9531"
+  }
+}
