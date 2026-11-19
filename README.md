@@ -118,7 +118,10 @@ so a silent regression cannot pass unnoticed.
   `results.json` under `_meta.seeds` and in the run manifest.
 - `results.json` carries the commit that produced it (`pipeline_commit`). If
   git is not installed on the marking machine, the value is read directly from
-  `.git/HEAD` instead of silently becoming `NO_GIT_REPO`.
+  `.git/HEAD` instead of silently becoming `NO_GIT_REPO`. Note that
+  `pipeline_commit` names the code commit, while the regenerated outputs are
+  committed one step later, so a fresh run records the commit you ran from.
+  Compare every field except that one.
 - L2 residual values are reported on the guide's 400-point E_F grid, because
   that is the grid the assessment specifies. A convergence table (400 / 1600 /
   6400 points) is stored in `_meta.L2.grid_convergence`; it shows the 400-point
