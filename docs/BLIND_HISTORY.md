@@ -19,13 +19,14 @@ outputs/run_manifest_blind.json, outputs/figures_blind/ and outputs/pipeline_com
 | A — first look | 2026-11-19 19:28 | f536ce8 | first execution on the blind data | docs/run_artifacts/blind_results_2026-11-19_first_look.json (git 8eb5923) |
 | B — submitted | 2026-11-19 19:30 | d41ce42 | re-run after the interior-feature rule (see the deviation below) | docs/run_artifacts/blind_results_2026-11-19_submitted.json, run_log_blind_2026-11-19_submitted.txt, pipeline_commit_2026-11-19_submitted.txt (git 7ed21d4) |
 | C — reproducibility re-run | 2026-11-19 19:34 | b9aad8a + figure-folder fix | re-run after the blind run was given its own figure folder (ledger entry 8) | outputs/ (current working files) |
+| D — diagnostic re-run | 2026-11-19 19:40 | 03e5e8f | re-run after the eta sweep also started recording max abs(m) (a diagnostic field only) | outputs/ (current working files) |
 
-All three runs: exit status 0, "all built-in checks passed", same command.
+All four runs: exit status 0, "all built-in checks passed", same command.
 The logs and the commit id were written by the pipeline itself, not retyped.
 
 ## Results
 
-Values below are from run C. Runs A and B give the same numbers except for the
+Values below are from run D. Runs B to D give the same numbers except for the
 second L3 feature, which is the one item affected by the disclosed change.
 
 | Quantity | Blind value |
@@ -55,6 +56,15 @@ Run C exists because the blind run used to write its plots into
 outputs/figures, the same folder as the regular run, so whichever ran last
 overwrote the other's figures. The fix gives the blind run
 outputs/figures_blind (ledger entry 8).
+
+## What run D changed relative to run C
+
+Nothing in the analysis. The eta sweep now also stores max abs(m) for each
+multiplier, so a reader can see whether the verdict would survive a different
+regularisation strength; that adds five numbers and changes none. Comparing the
+JSON with pipeline_commit, max_abs_map and the figure paths excluded finds zero
+differences, for both the blind and the regular results. Reproduce the check
+with
 
 ## One disclosed deviation from a strict freeze
 

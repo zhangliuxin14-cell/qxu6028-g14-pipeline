@@ -2,7 +2,7 @@
   "schema_version": "QXU6028-results-v1",
   "group": "G14",
   "dataset_set": "blind",
-  "pipeline_commit": "7884d44c25745d602a8143618ca1da8e674985b2",
+  "pipeline_commit": "03e5e8f40ea67a6bf466739486252303f3cd1032",
   "L1": {
     "correction_factor": 4.3627188846926215,
     "n_fermi_op_cm2": 643440837749.2031,
@@ -541,35 +541,40 @@
           "eta": 1.3309924629099195e-05,
           "residual_norm": 1.6214014040446834e-06,
           "roughness_norm": 0.05881125364158499,
-          "residual_over_noise": 0.7159627321861355
+          "residual_over_noise": 0.7159627321861355,
+          "max_abs_map": 0.033790393221743036
         },
         {
           "eta_multiplier": 0.1,
           "eta": 0.00013309924629099194,
           "residual_norm": 1.2698787786852373e-05,
           "roughness_norm": 0.058792286363059915,
-          "residual_over_noise": 5.60740775026256
+          "residual_over_noise": 5.60740775026256,
+          "max_abs_map": 0.0338342601737745
         },
         {
           "eta_multiplier": 1.0,
           "eta": 0.0013309924629099194,
           "residual_norm": 0.00010711763641988852,
           "roughness_norm": 0.05865422988943533,
-          "residual_over_noise": 47.299968684615095
+          "residual_over_noise": 47.299968684615095,
+          "max_abs_map": 0.0338865485320978
         },
         {
           "eta_multiplier": 10.0,
           "eta": 0.013309924629099194,
           "residual_norm": 0.0008385155296038466,
           "roughness_norm": 0.05778743410395871,
-          "residual_over_noise": 370.26356832927087
+          "residual_over_noise": 370.26356832927087,
+          "max_abs_map": 0.033459584191831294
         },
         {
           "eta_multiplier": 100.0,
           "eta": 0.13309924629099193,
           "residual_norm": 0.005843982101861889,
           "roughness_norm": 0.05318446287064368,
-          "residual_over_noise": 2580.529030046779
+          "residual_over_noise": 2580.529030046779,
+          "max_abs_map": 0.03076792991800303
         }
       ],
       "wafer_gradient_x_per_pitch": 0.0035165974949406343,
