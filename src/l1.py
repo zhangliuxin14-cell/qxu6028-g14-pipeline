@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .common import DATA_DIR, E_CHARGE, EMAX, FIG_DIR, KB, NA, OUTPUT_DIR, fermi
+from . import common
+from .common import E_CHARGE, EMAX, FIG_DIR, KB, NA, OUTPUT_DIR, fermi
 
 
 def n_band(EF: float, T: float, c: float) -> float:
@@ -53,8 +54,8 @@ def _crossing(EF_grid: np.ndarray, C: np.ndarray, target: float) -> float:
 
 def run_l1() -> Dict:
     """Run the complete L1 analysis. Returns the L1 results dict."""
-    params = json.loads((DATA_DIR / "L1_params.json").read_text(encoding="utf-8"))
-    df = pd.read_csv(DATA_DIR / "L1_data.csv")
+    params = json.loads((common.DATA_DIR / "L1_params.json").read_text(encoding="utf-8"))
+    df = pd.read_csv(common.DATA_DIR / "L1_data.csv")
 
     c = float(params["c"])
     T = float(params["T"])

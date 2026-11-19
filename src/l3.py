@@ -14,7 +14,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .common import DATA_DIR, FIG_DIR, OUTPUT_DIR
+from . import common
+from .common import FIG_DIR, OUTPUT_DIR
 
 NPIX = 10
 N = NPIX * NPIX
@@ -197,9 +198,9 @@ def _merge_features_global_extrema(m: np.ndarray) -> List[Dict]:
 
 def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
     """Run the complete L3 analysis."""
-    meta = json.loads((DATA_DIR / "L3_meta.json").read_text(encoding="utf-8"))
-    A = np.load(DATA_DIR / "L3_A.npy")
-    d_reps = np.loadtxt(DATA_DIR / "L3_d.csv", delimiter=",")
+    meta = json.loads((common.DATA_DIR / "L3_meta.json").read_text(encoding="utf-8"))
+    A = np.load(common.DATA_DIR / "L3_A.npy")
+    d_reps = np.loadtxt(common.DATA_DIR / "L3_d.csv", delimiter=",")
 
     # ---- file checks (guide p.10) ----
     assert A.shape == (128, 100), f"A shape {A.shape}"

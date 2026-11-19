@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .common import DATA_DIR, FIG_DIR, KB, NA, OUTPUT_DIR, fermi
+from . import common
+from .common import FIG_DIR, KB, NA, OUTPUT_DIR, fermi
 
 # grids (guide p.7)
 E_GRID = np.linspace(-2.5, 2.5, 4000)
@@ -154,8 +155,8 @@ def fit_once(RH_mean: np.ndarray, Rs_mean: np.ndarray, lib: ModelLibrary
 
 def run_l2(n_boot: int = 200, seed: int = 20260921) -> Dict:
     """Run the complete L2 analysis with bootstrap uncertainty."""
-    meta = json.loads((DATA_DIR / "L2_meta.json").read_text(encoding="utf-8"))
-    df = pd.read_csv(DATA_DIR / "L2_data.csv")
+    meta = json.loads((common.DATA_DIR / "L2_meta.json").read_text(encoding="utf-8"))
+    df = pd.read_csv(common.DATA_DIR / "L2_data.csv")
     T = float(meta["T_K"])
 
     idxs = np.sort(df["measurement_index"].unique())
