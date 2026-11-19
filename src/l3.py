@@ -243,7 +243,8 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
         sens.append({"eta_multiplier": mult, "eta": float(eta),
                      "residual_norm": float(resid),
                      "roughness_norm": float(rough),
-                     "residual_over_noise": float(resid / noise_norm)})
+                     "residual_over_noise": float(resid / noise_norm),
+                     "max_abs_map": float(np.abs(m_eta).max())})
 
     # ---- regularisation strength ----
     # The guide's eta0 is a smooth reference; the repeat noise documents that
