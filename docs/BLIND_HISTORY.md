@@ -22,12 +22,12 @@ outputs/run_manifest_blind.json, outputs/figures_blind/ and outputs/pipeline_com
 | D — diagnostic re-run | 2026-11-19 19:40 | 03e5e8f | re-run after the eta sweep also started recording max abs(m) (a diagnostic field only) | outputs/ (current working files) |
 | E — figure re-run | 2026-11-19 19:47 | 194418f | wrapped a clipped axis title in the map figure; no data change | outputs/ (current working files) |
 
-All four runs: exit status 0, "all built-in checks passed", same command.
+All five runs: exit status 0, "all built-in checks passed", same command.
 The logs and the commit id were written by the pipeline itself, not retyped.
 
 ## Results
 
-Values below are from run D. Runs B to D give the same numbers except for the
+Values below are from run D. Runs B to E give the same numbers except for the
 second L3 feature, which is the one item affected by the disclosed change.
 
 | Quantity | Blind value |
@@ -64,8 +64,14 @@ Nothing in the analysis. The eta sweep now also stores max abs(m) for each
 multiplier, so a reader can see whether the verdict would survive a different
 regularisation strength; that adds five numbers and changes none. Comparing the
 JSON with pipeline_commit, max_abs_map and the figure paths excluded finds zero
-differences, for both the blind and the regular results. Reproduce the check
-with
+differences, for both the blind and the regular results. Reproduce it with the
+comparison script in tools/ or by editing the two JSON files by hand.
+
+## What run E changed relative to run D
+
+One axis title in the L3 map figure. The detrended panel's caption ran past the
+axes, so its last characters were cut off in the exported PNG. Nothing in the
+JSON changes: the numbers quoted above are run D's and run E reproduces them.
 
 ## One disclosed deviation from a strict freeze
 
