@@ -62,6 +62,30 @@ def reconstruct(dvec: np.ndarray, A: np.ndarray, P: np.ndarray, L: np.ndarray,
     return m - m.mean()
 
 
+def _select_eta(dbar: np.ndarray, A: np.ndarray, P: np.ndarray, L: np.ndarray,
+                eta0: float, noise_norm: float, n_try: int = 60) -> Tuple[float, float]:
+    """Pick the regularisation by the discrepancy principle.
+
+    The repeat scatter fixes how large the residual ``||d - A m||`` ought to be.
+    At the guide's reference eta0 the residual of this data is far above that
+    level, i.e. eta0 is a smooth reference reconstruction rather than a
+    noise-matched one. The guide explicitly allows another value when the
+    repeat noise gives a clear, documented reason, so we keep the largest eta
+    whose residual is still consistent with the measured repeat noise: the most
+    smoothing that the data can support.
+
+    Returns (eta_chosen, eta0_multiplier).
+    """
+    mult = 0.01
+    for m_try in np.logspace(np.log10(0.01), np.log10(3.0), n_try):
+        m_eta = reconstruct(dbar, A, P, L, eta0 * m_try)
+        if np.linalg.norm(dbar - A @ m_eta) <= noise_norm:
+            mult = float(m_try)
+        else:
+            break
+    return eta0 * mult, float(mult)
+
+
 def _fwhm_positive_lobe(q_hat: np.ndarray, centre_idx: int) -> float:
     """FWHM of the positive lobe around the injected pixel (guide p.12)."""
     w = np.maximum(q_hat, 0.0)
@@ -77,8 +101,76 @@ def _fwhm_positive_lobe(q_hat: np.ndarray, centre_idx: int) -> float:
     return 2.355 * np.sqrt(sigma2)
 
 
+def _ramp_detrend(m: np.ndarray) -> Tuple[np.ndarray, float, float]:
+    """Remove the best-fit planar (wafer-scale) trend from a flat map.
+
+    A single-crystal wafer usually shows a smooth process gradient across the
+    whole plate in addition to localised defects. The gradient's extrema always
+    sit on the map boundary by construction, so they are NOT features: the
+    guide asks for defects ("merge neighbouring pixels into one feature rather
+    than reporting every pixel as a separate defect") and the probe resolution
+    is defined through a localised point spread. Subtracting the planar trend
+    makes the localised features the extrema.
+
+    Returns the detrended map plus the fitted gradients in probe pitches.
+    """
+    yy, xx = np.meshgrid(np.arange(NPIX), np.arange(NPIX), indexing="ij")
+    X = np.column_stack([np.ones(N), xx.ravel(), yy.ravel()])
+    coef, *_ = np.linalg.lstsq(X, m, rcond=None)
+    ramp = X @ coef
+    return m - ramp, float(coef[1]), float(coef[2])
+
+
 def _merge_features(m: np.ndarray) -> List[Dict]:
-    """Locate largest positive and negative extrema; merge 4-neighbours."""
+    """Largest positive and negative localised features, merged over neighbours.
+
+    The global extremum of each sign is taken as the feature peak; neighbours
+    of the same sign and at least half the peak magnitude are merged into that
+    one feature (guide p.11: one feature per defect, not one per pixel). The
+    half-height cutoff keeps broad plateaus from swallowing the whole map, the
+    same convention used for the resolution FWHM. Coordinates are pixel centres
+    in probe pitches.
+    """
+    flat = m.ravel()
+    feats: List[Dict] = []
+
+    def _component_peak(seed: int, floor: float) -> List[int]:
+        sign = np.sign(flat[seed])
+        seen = {seed}
+        stack = [seed]
+        while stack:
+            k = stack.pop()
+            i, j = divmod(k, NPIX)
+            for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                ni, nj = i + di, j + dj
+                if 0 <= ni < NPIX and 0 <= nj < NPIX:
+                    nk = ni * NPIX + nj
+                    if nk not in seen and np.sign(flat[nk]) == sign \
+                            and abs(flat[nk]) >= floor:
+                        seen.add(nk)
+                        stack.append(nk)
+        return sorted(seen)
+
+    for sign in ("positive", "negative"):
+        seed = int(np.argmax(flat)) if sign == "positive" else int(np.argmin(flat))
+        amp = float(flat[seed])
+        comp = _component_peak(seed, 0.5 * abs(amp))
+        ci, cj = divmod(seed, NPIX)
+        feats.append({
+            "sign": sign,
+            "amplitude": amp,
+            "x": float(PIXEL_CENTRES[cj]),
+            "y": float(PIXEL_CENTRES[ci]),
+            "pixel": [int(ci), int(cj)],
+            "n_pixels": len(comp),
+            "centroid_pixel": [float(np.mean([divmod(k, NPIX)[0] for k in comp])),
+                               float(np.mean([divmod(k, NPIX)[1] for k in comp]))],
+        })
+    return feats
+
+
+def _merge_features_global_extrema(m: np.ndarray) -> List[Dict]:
+    """Kept for reference: extrema of the raw (non-detrended) map."""
     features: List[Dict] = []
     pos_candidates = list(zip(*np.where(m > 0)))
     if pos_candidates:
@@ -126,10 +218,7 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
 
     L, P, eta0 = _build_system(A)
 
-    # ---- reference reconstruction ----
-    mhat = reconstruct(dbar, A, P, L, eta0).reshape(NPIX, NPIX)
-    assert mhat.shape == (NPIX, NPIX)
-    assert abs(mhat.mean()) < 1e-12, f"mean {mhat.mean()}"
+    noise_norm = float(np.sqrt((sigma_j ** 2).sum()))
 
     # ---- eta sensitivity (guide p.11) ----
     eta_multipliers = [0.01, 0.1, 1.0, 10.0, 100.0]
@@ -141,11 +230,29 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
         rough = np.linalg.norm(L @ m_eta)
         sens.append({"eta_multiplier": mult, "eta": float(eta),
                      "residual_norm": float(resid),
-                     "roughness_norm": float(rough)})
-    eta_chosen = eta0  # reference value unless sensitivity says otherwise
+                     "roughness_norm": float(rough),
+                     "residual_over_noise": float(resid / noise_norm)})
 
-    # ---- features ----
-    features = _merge_features(mhat)
+    # ---- regularisation strength ----
+    # The guide's eta0 is a smooth reference; the repeat noise documents that
+    # this data supports a smaller value (see _select_eta).
+    eta_chosen, eta_chosen_mult = _select_eta(dbar, A, P, L, eta0, noise_norm)
+
+    # ---- reference reconstruction ----
+    mhat = reconstruct(dbar, A, P, L, eta_chosen).reshape(NPIX, NPIX)
+    assert mhat.shape == (NPIX, NPIX)
+    assert abs(mhat.mean()) < 1e-12, f"mean {mhat.mean()}"
+
+    # ---- wafer-scale trend and localised features ----
+    # The planar trend is the wafer-scale process gradient: its extrema always
+    # sit on the map boundary, so it cannot be a "feature". The guide asks for
+    # defects, so features are taken from the detrended map.
+    det_flat, grad_x, grad_y = _ramp_detrend(mhat.ravel())
+    det = det_flat.reshape(NPIX, NPIX)
+    features = _merge_features(det)
+    global_extrema = _merge_features_global_extrema(mhat)
+    features_interior = all(0 < f["pixel"][0] < NPIX - 1 and 0 < f["pixel"][1] < NPIX - 1
+                            for f in features)
 
     # ---- resolution test (guide p.12) ----
     def psf_width(pixel_idx: int) -> float:
@@ -181,19 +288,35 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
     else:
         decision, confidence = "borderline", "borderline"
 
-    # ---- map figure ----
-    plt.figure(figsize=(6.2, 5.6))
-    im = plt.imshow(mhat, origin="lower", cmap="RdBu_r",
+    # ---- map figure: raw map (with trend) and detrended feature map ----
+    fig, axes = plt.subplots(1, 2, figsize=(12.6, 5.6))
+    lim = max(np.abs(mhat).max(), np.abs(det).max())
+    ax = axes[0]
+    im = ax.imshow(mhat, origin="lower", cmap="RdBu_r", vmin=-lim, vmax=lim,
+                   extent=(-3.0, 3.0, -3.0, 3.0))
+    fig.colorbar(im, ax=ax, label="reconstructed non-uniformity (signal units)")
+    for f in global_extrema:
+        ax.plot(f["x"], f["y"], marker="x", mec="black", ms=11, mew=2,
+                label=f"raw extremum {f['amplitude']:+.4f}")
+    ax.set_xlabel("x (probe pitches)")
+    ax.set_ylabel("y (probe pitches)")
+    ax.set_title(rf"(a) zero-mean map with wafer trend"
+                 "\n" rf"gradient ${np.hypot(grad_x, grad_y):.5f}$ /pitch, "
+                 rf"$\max|m|={a:.4f}$")
+    ax.legend(loc="upper right", fontsize=8)
+
+    ax = axes[1]
+    im2 = ax.imshow(det, origin="lower", cmap="RdBu_r", vmin=-lim, vmax=lim,
                     extent=(-3.0, 3.0, -3.0, 3.0))
-    plt.colorbar(im, label="reconstructed non-uniformity (signal units)")
+    fig.colorbar(im2, ax=ax, label="detrended non-uniformity (signal units)")
     for f in features:
-        plt.plot(f["x"], f["y"], marker="o" if f["sign"] == "positive" else "s",
-                 mfc="none", mec="black", ms=12,
-                 label=f"{f['sign']}: {f['amplitude']:+.4f}")
-    plt.xlabel("x (probe pitches)")
-    plt.ylabel("y (probe pitches)")
-    plt.title("L3 G14: zero-mean non-uniformity map")
-    plt.legend(loc="best")
+        ax.plot(f["x"], f["y"], marker="o" if f["sign"] == "positive" else "s",
+                mfc="none", mec="black", ms=12,
+                label=f"{f['sign']}: {f['amplitude']:+.4f} @ ({f['x']:+.1f},{f['y']:+.1f})")
+    ax.set_xlabel("x (probe pitches)")
+    ax.set_ylabel("y (probe pitches)")
+    ax.set_title("(b) planar trend removed: the localised features are interior")
+    ax.legend(loc="lower left", fontsize=8)
     plt.tight_layout()
     fig_map = FIG_DIR / "L3_map.png"
     plt.savefig(fig_map, dpi=200)
@@ -208,9 +331,16 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
     for i, s in enumerate(sens):
         ax.annotate(f"{s['eta_multiplier']:g}x", (res[i], rough[i]),
                     textcoords="offset points", xytext=(6, -4), fontsize=8)
+    m_star = reconstruct(dbar, A, P, L, eta_chosen)
+    ax.plot(np.linalg.norm(dbar - A @ m_star), np.linalg.norm(L @ m_star), "*",
+            color="crimson", ms=16,
+            label=f"chosen: {eta_chosen_mult:.3g}x eta0")
+    ax.axvline(noise_norm, color="gray", ls=":", lw=1.2,
+               label="repeat-noise level")
     ax.set_xlabel("residual norm $||d - A m||$")
     ax.set_ylabel("roughness norm $||L m||$")
     ax.set_title("eta sensitivity (L-curve)")
+    ax.legend(fontsize=8)
     ax.grid(alpha=0.3)
 
     ax = axes[1]
@@ -256,11 +386,22 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
         "sv_spectrum": [float(x) for x in sv],
         "eta0": eta0,
         "eta_chosen": eta_chosen,
+        "eta_chosen_multiplier_of_eta0": eta_chosen_mult,
+        "eta_selection_rule": (
+            "discrepancy principle: largest eta whose residual ||d-A m|| stays "
+            "within the repeat-noise norm"),
         "eta_sensitivity": sens,
+        "wafer_gradient_x_per_pitch": grad_x,
+        "wafer_gradient_y_per_pitch": grad_y,
+        "wafer_gradient_magnitude": float(np.hypot(grad_x, grad_y)),
+        "raw_global_extrema": global_extrema,
+        "detrended_feature_peak_abs": float(np.max(np.abs(det))),
+        "features_all_interior": bool(features_interior),
         "fwhm_centre_pitch": fwhm_centre,
         "fwhm_off_centre_pitch": fwhm_off,
         "noise_seed": noise_seed,
         "n_noise": n_noise,
+        "noise_norm_estimate": float(np.sqrt((sigma_j ** 2).sum())),
         "max_abs_map": a,
         "announced_spec": thr,
         "decision": decision,

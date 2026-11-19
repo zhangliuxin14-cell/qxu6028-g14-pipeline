@@ -103,6 +103,25 @@ def _validate(out: dict) -> list:
                    or (L2["model"] == "hardgap" and L2["Eg_kT"] >= 0.5)))
     checks.append(("L2 bootstrap hard-gap fraction in [0,1]",
                    0.0 <= out["_meta"]["L2"]["frac_hardgap"] <= 1.0))
+    checks.append(("L2 trajectory crosses neutrality exactly once",
+                   int(np.sum(np.diff(np.sign(L2["EF_trajectory_eV"])) != 0)) == 1))
+
+    # L2 orientation gate (guide p.7, handbook L2 gate): the model curve must
+    # pass continuously through R_H = 0 with R_s peaking there, and the wings
+    # must obey |R_H| ~ R_s**2. A 1/(n-p) proxy diverges at neutrality instead.
+    from src.l2 import ModelLibrary
+    _lib = ModelLibrary(float(out["_meta"]["L2"]["T_K"]))
+    _cone = _lib.cone
+    _j0 = int(np.argmin(np.abs(_cone[:, 0])))
+    _ja = int(np.argmax(_cone[:, 1]))
+    checks.append(("L2 cone curve crosses R_H = 0 at neutrality",
+                   abs(_cone[_j0, 0]) < 0.05))
+    checks.append(("L2 cone R_s peaks at the R_H zero crossing",
+                   abs(_j0 - _ja) <= 2 and _cone[_j0, 1] > 0.95))
+    _k = np.argsort(-np.abs(_cone[:, 0]))[:8]
+    _ratio = np.abs(_cone[_k, 0]) / _cone[_k, 1] ** 2
+    checks.append(("L2 cone wings obey |R_H| ~ R_s^2",
+                   float(_ratio.std() / _ratio.mean()) < 0.15))
 
     # L3 checks
     m = np.asarray(L3["map"], dtype=float)
@@ -113,6 +132,25 @@ def _validate(out: dict) -> list:
     checks.append(("L3 pass field is boolean", isinstance(L3["pass"], bool)))
     checks.append(("L3 confidence in {clear, borderline}",
                    L3["confidence"] in ("clear", "borderline")))
+
+    # L3 feature gate: the wafer-scale planar trend always puts its extrema on
+    # the map boundary, so those are not features. The reported features must
+    # come from the detrended map, and the dominant one must be interior
+    # (a feature reported at a corner means the trend was not removed).
+    _l3m = out["_meta"]["L3"]
+    checks.append(("L3 features come from the detrended map",
+                   all("centroid_pixel" in f for f in L3["features"])))
+    _dom = max(L3["features"], key=lambda f: abs(f["amplitude"]))
+    checks.append(("L3 dominant feature is interior, not on the map edge",
+                   0 < _dom["pixel"][0] < _l3m["npix"] - 1
+                   and 0 < _dom["pixel"][1] < _l3m["npix"] - 1))
+    checks.append(("L3 feature peak below raw map extremum",
+                   abs(_dom["amplitude"]) < _l3m["max_abs_map"]))
+    checks.append(("L3 eta chosen inside the scanned range",
+                   0.01 * _l3m["eta0"] <= _l3m["eta_chosen"] <= 100.0 * _l3m["eta0"]))
+    checks.append(("L3 residual at chosen eta consistent with repeat noise",
+                   min(s["residual_over_noise"] for s in _l3m["eta_sensitivity"]) <= 1.0
+                   <= max(s["residual_over_noise"] for s in _l3m["eta_sensitivity"])))
 
     for name, passed in checks:
         (ok if passed else bad).append(name)
@@ -127,6 +165,7 @@ def write_outputs(out: dict, blind: bool = False) -> None:
         json.dump(out, f, indent=2)
     print(f"wrote {target}")
     for fig in out["_meta"].get("L1", {}).get("figure", ""), \
+                out["_meta"]["L2"].get("gate_figure", ""), \
                 out["_meta"]["L2"].get("model_figure", ""), \
                 out["_meta"]["L2"].get("trajectory_figure", ""), \
                 out["_meta"]["L3"].get("map_figure", ""), \

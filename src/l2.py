@@ -6,7 +6,7 @@ how did the Fermi level drift across the measurement series?
 Guide reference: Practical Methods Guide pp.6-9.
 """
 import json
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 import matplotlib
 
@@ -21,6 +21,10 @@ from .common import DATA_DIR, FIG_DIR, KB, NA, OUTPUT_DIR, fermi
 E_GRID = np.linspace(-2.5, 2.5, 4000)
 EF_GRID_KT = np.linspace(-8.0, 9.0, 400)
 EG_KT_CANDIDATES = np.arange(0.50, 8.01, 0.25)
+# Denser candidate E_F grid used ONLY as a convergence diagnostic: it shows how
+# much of the reported residual is the 400-point grid's quantisation floor
+# rather than genuine model misfit. No reported number uses this grid.
+EF_GRID_DIAG_NEF = 6400
 
 
 def dos(E: np.ndarray, model: str, c: float, Eg: float) -> np.ndarray:
@@ -41,22 +45,58 @@ def carrier_np(EF: float, T: float, model: str, c: float, Eg: float) -> Tuple[fl
 
 
 def rh_rs_from_np(n: np.ndarray, p: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """Raw Hall and sheet-resistance proxies (e=1, mu=1; scales cancel later)."""
-    R_H = 1.0 / (n - p)
-    R_s = 1.0 / (n + p)
-    return R_H, R_s
+    """Hall and sheet-resistance proxies of a two-carrier sheet.
+
+    Equal electron and hole mobilities, with e = mu = 1 (the fixed scale
+    cancels because R_H and R_s are normalised separately, guide p.6):
+
+        sigma_xx = n + p                ->  R_s = 1 / (n + p)
+        sigma_xy = B * (p - n)          ->  R_H = (p - n) / (n + p)**2
+
+    The (p - n) numerator and the squared denominator are what make R_H
+    finite and sign-changing at charge neutrality, so the model curve passes
+    continuously through the measured R_H zero crossing (guide p.7 orientation
+    check) and the wings obey |R_H| ~ R_s**2 (handbook L2 gate). Using
+    1/(n - p) instead makes R_H diverge exactly where charge neutrality sits,
+    which is topologically incompatible with the data.
+    """
+    return (p - n) / (n + p) ** 2, 1.0 / (n + p)
 
 
 class ModelLibrary:
-    """Precomputed normalised model curves (guide p.7: build once, reuse)."""
+    """Precomputed normalised model curves (guide p.7: build once, reuse).
 
-    def __init__(self, T: float):
+    ``n_ef`` overrides the number of candidate E_F points. The guide fixes this
+    at 400 for every reported number; a denser grid is only useful as a
+    convergence diagnostic, because the nearest-curve residual carries a
+    quantisation floor set by the spacing of those candidate points.
+    """
+
+    def __init__(self, T: float, n_ef: Optional[int] = None,
+                 eg_list: Optional[Sequence[float]] = None):
         self.T = T
-        self.EF_grid = EF_GRID_KT * KB * T
+        grid = (EF_GRID_KT if n_ef is None
+                else np.linspace(EF_GRID_KT[0], EF_GRID_KT[-1], int(n_ef)))
+        self.n_ef = int(len(grid))
+        self.EF_grid = grid * KB * T
         self.cone = self._build("cone", 0.0)
         self.gaps: Dict[float, np.ndarray] = {}
-        for eg in EG_KT_CANDIDATES:
+        for eg in (EG_KT_CANDIDATES if eg_list is None else eg_list):
             self.gaps[float(eg)] = self._build("hardgap", float(eg) * KB * T)
+        self._extra: Dict[float, np.ndarray] = {}
+
+    def extra(self, Eg_kt: float) -> np.ndarray:
+        """Curve for a gap that is NOT on the candidate grid (display only).
+
+        Kept out of ``self.gaps`` on purpose: ``fit_once`` and the 15% selection
+        rule must keep seeing exactly the grid specified by the guide
+        (0.50-8.00 kT, step 0.25). This exists so the comparison figure can also
+        show what a gap just below the grid floor would look like.
+        """
+        key = float(Eg_kt)
+        if key not in self._extra:
+            self._extra[key] = self._build("hardgap", key * KB * self.T)
+        return self._extra[key]
 
     def _build(self, model: str, Eg: float) -> np.ndarray:
         n = np.empty(len(self.EF_grid))
@@ -171,28 +211,159 @@ def run_l2(n_boot: int = 200, seed: int = 20260921) -> Dict:
     EF_hi = np.percentile(EF_boot, 84, axis=0)
     frac_hardgap = float(hardgap_boot.mean())
 
-    # ---- model figure: normalised R_H-R_s space ----
-    RHn, Rsn = _normalise_pair(RH_mean, Rs_mean)
-    data_xy = np.column_stack([RHn, Rsn])
-    curve = lib.cone if model == "cone" else lib.gaps[eg_kt]
-
-    plt.figure(figsize=(7, 5.2))
-    plt.plot(curve[:, 0], curve[:, 1], "-", color="#1f77b4", lw=2,
-             label=f"selected model: {model}"
-                   + ("" if model == "cone" else rf", $E_g={eg_kt:.2f}\,k_BT$"))
-    plt.plot(curve[:, 0], curve[:, 1], "k.", markersize=0.6, alpha=0.4)
-    plt.plot(data_xy[:, 0], data_xy[:, 1], "o", color="crimson", ms=5,
-             label="mean measured pairs")
-    plt.plot(data_xy[0, 0], data_xy[0, 1], "g*", ms=16, label="first index")
-    plt.plot(data_xy[-1, 0], data_xy[-1, 1], "m*", ms=16, label="last index")
-    plt.xlabel(r"normalised $R_H$ (sign preserved)")
-    plt.ylabel(r"normalised $R_{xx}$")
-    plt.title(
-        rf"L2 G14: normalised pair space -- $r_{{cone}}={r_cone:.4f}$, "
-        rf"$r_{{gap}}={r_gap:.4f}$"
-    )
+    # ---- gate figure: three raw repeats, sign-change bracket marked ----
+    # (guide p.6 step 3; the zero crossing must be located BEFORE normalisation)
+    plt.figure(figsize=(7.4, 4.8))
+    for i, m in enumerate(idxs):
+        reps = reps_by_idx[i]
+        plt.plot(np.full(len(reps), m), reps[:, 0], ".", color="#1f77b4",
+                 ms=6, alpha=0.7, label="raw repeats" if i == 0 else None)
+    plt.plot(idxs, RH_mean, "-", color="crimson", lw=1.2, label="repeat mean")
+    plt.axhline(0.0, color="k", lw=0.8)
+    for j, pair in enumerate(zero_crossing_pairs):
+        plt.axvspan(pair[0], pair[1], color="orange", alpha=0.35,
+                    label="sign-change bracket" if j == 0 else None)
+        for m in pair:
+            plt.axvline(m, color="orange", ls=":", lw=1.2)
+    plt.xlabel("measurement index")
+    plt.ylabel(r"raw $R_H$")
+    plt.title("L2 G14: gate -- R_H zero crossing located before normalisation")
     plt.legend(loc="best")
     plt.grid(alpha=0.3)
+    plt.tight_layout()
+    fig_gate = FIG_DIR / "L2_gate.png"
+    plt.savefig(fig_gate, dpi=200)
+    plt.close()
+
+    # ---- best hard-gap candidate on the repeat means ----
+    RHn, Rsn = _normalise_pair(RH_mean, Rs_mean)
+    data_xy = np.column_stack([RHn, Rsn])
+    # (computed here because the model figure below draws its gap neighbours)
+    if model == "hardgap":
+        best_gap_kt, best_gap_rms = eg_kt, r_gap
+    else:
+        best_gap_kt = min(
+            lib.gaps, key=lambda g: _fit_nearest(data_xy, lib.gaps[g])[2])
+        best_gap_rms = _fit_nearest(data_xy, lib.gaps[best_gap_kt])[2]
+
+    # ---- model figure: normalised R_H-R_s space ----
+    curve = lib.cone if model == "cone" else lib.gaps[eg_kt]
+
+    # Gap-family comparison around the best candidate: one gap step smaller,
+    # the best candidate itself, and one gap step larger. When the best
+    # candidate sits on the grid floor (0.50 kT) there is no smaller grid
+    # value, so one sub-grid step is added for illustration only -- it is
+    # never offered to the selection rule.
+    gap_keys = sorted(lib.gaps)
+    i_best = gap_keys.index(best_gap_kt)
+    sub_grid = i_best - 1 < 0
+    show_gaps = [(best_gap_kt, lib.gaps[best_gap_kt], False)]
+    show_gaps.insert(0, (best_gap_kt - 0.25, lib.extra(best_gap_kt - 0.25), True)
+                     if sub_grid else
+                     (gap_keys[i_best - 1], lib.gaps[gap_keys[i_best - 1]], False))
+    if i_best + 1 < len(gap_keys):
+        show_gaps.append((gap_keys[i_best + 1], lib.gaps[gap_keys[i_best + 1]],
+                          False))
+
+    fig, (axA, axB) = plt.subplots(
+        1, 2, figsize=(13.2, 5.6), gridspec_kw={"width_ratios": [1.12, 1.0]})
+
+    # ----- panel A: curve comparison in the normalised pair space -----
+    for g, gcurve, below in show_gaps:
+        if model == "hardgap" and g == eg_kt:
+            continue  # already drawn as the selected curve below
+        r_g = _fit_nearest(data_xy, gcurve)[2]
+        if g == best_gap_kt:
+            ls, col, lw = "-", "#2ca02c", 1.8
+        elif g < best_gap_kt:
+            ls, col, lw = "--", "#7f7f7f", 1.4
+        else:
+            ls, col, lw = ":", "#c8a165", 1.8
+        tag = ""
+        if below:
+            tag = " (below grid, comparison only)"
+        elif g == gap_keys[0]:
+            tag = " (grid minimum)"
+        axA.plot(gcurve[:, 0], gcurve[:, 1], ls, color=col, lw=lw,
+                 label=rf"hard gap $E_g={g:.2f}\,k_BT${tag}, $r={r_g:.4f}$")
+
+    axA.plot(curve[:, 0], curve[:, 1], "-", color="#1f77b4", lw=2.4,
+             label=f"selected: {model}"
+                   + ("" if model == "cone" else rf", $E_g={eg_kt:.2f}\,k_BT$"))
+    axA.plot(data_xy[:, 0], data_xy[:, 1], "o", color="crimson", ms=5,
+             label="mean measured pairs")
+    axA.plot(data_xy[0, 0], data_xy[0, 1], "g*", ms=16, label="first index")
+    axA.plot(data_xy[-1, 0], data_xy[-1, 1], "m*", ms=16, label="last index")
+    axA.set_xlabel(r"normalised $R_H$ (sign preserved)")
+    axA.set_ylabel(r"normalised $R_{xx}$")
+    axA.set_title(
+        rf"(a) normalised pair space -- the gap family nearly coincides"
+        "\n"
+        rf"$r_{{cone}}={r_cone:.4f}$, best hard gap $r={best_gap_rms:.4f}$, "
+        rf"15% rule needs $<{0.85 * r_cone:.4f}$"
+    )
+    axA.legend(loc="best", fontsize=8)
+    axA.grid(alpha=0.3)
+
+    # ----- panel B: residual against gap, with the selection threshold -----
+    threshold = 0.85 * r_cone
+    grid_egs = np.array(sorted(lib.gaps), dtype=float)
+    grid_rms = np.array([_fit_nearest(data_xy, lib.gaps[float(e)])[2]
+                         for e in grid_egs])
+
+    # Convergence diagnostic. Every residual is the distance to a curve that is
+    # itself sampled on the candidate E_F grid, so it carries a quantisation
+    # floor (~0.013 here) that differs slightly from curve to curve. On a denser
+    # grid that artefact disappears and the residual grows monotonically with
+    # the gap, leaving the cone lowest -- which is the physically expected
+    # ordering. Only cone plus the gaps shown in panel (a) are rebuilt.
+    shown_egs = sorted({float(g) for g, _, _ in show_gaps})
+    lib_fine = ModelLibrary(T, n_ef=EF_GRID_DIAG_NEF, eg_list=shown_egs)
+    r_cone_fine = _fit_nearest(data_xy, lib_fine.cone)[2]
+
+    def _fine_curve(eg: float) -> np.ndarray:
+        return (lib_fine.gaps[eg] if eg in lib_fine.gaps
+                else lib_fine.extra(eg))
+
+    fine_gap_rms = {e: _fit_nearest(data_xy, _fine_curve(e))[2]
+                    for e in shown_egs}
+    fine_gap_rms_list = [fine_gap_rms[e] for e in shown_egs]
+
+    axB.axhspan(0.0, threshold, color="crimson", alpha=0.08)
+    axB.axhline(threshold, color="crimson", ls="--", lw=1.6,
+                label=rf"15% rule: $0.85\,r_{{cone}}={threshold:.5f}$")
+    axB.plot(0.0, r_cone_fine, "v", color="#555555", ms=8, zorder=4,
+             label=rf"cone, converged grid ({EF_GRID_DIAG_NEF} pts)")
+    axB.plot(shown_egs, fine_gap_rms_list, "v--", color="#555555", ms=8, lw=1.3,
+             label=rf"hard gap, converged grid ({EF_GRID_DIAG_NEF} pts)")
+    axB.plot(grid_egs, grid_rms, "s-", color="#2ca02c", ms=4, lw=1.4,
+             label="hard-gap candidates (guide grid, 400 pts)")
+    axB.plot(0.0, r_cone, "o", color="#1f77b4", ms=9, zorder=5,
+             label=rf"cone, guide grid, selected ($r={r_cone:.5f}$)")
+    for g, gcurve, below in show_gaps:
+        r_g = _fit_nearest(data_xy, gcurve)[2]
+        axB.plot(g, r_g, "k*", ms=13, zorder=6,
+                 label="gaps drawn in panel (a)" if g == best_gap_kt else None)
+    axB.annotate(
+        "no candidate enters this band on either grid,\n"
+        "so the 15% rule keeps the cone",
+        xy=(2.7, threshold), xytext=(2.7, threshold * 4.6),
+        fontsize=8.5, color="crimson",
+        arrowprops=dict(arrowstyle="->", color="crimson", lw=1.1))
+    axB.annotate(
+        "guide grid: artificial dip from grid quantisation\n"
+        "converged grid: monotone, cone lowest",
+        xy=(0.7, fine_gap_rms[0.75] if 0.75 in fine_gap_rms else 0.012),
+        xytext=(2.9, 0.030), fontsize=8.5, color="#333333",
+        arrowprops=dict(arrowstyle="->", color="#333333", lw=1.0))
+    axB.set_xlabel(r"$E_g\,/\,k_BT$")
+    axB.set_ylabel(r"nearest-curve residual $r$")
+    axB.set_title("(b) residual vs gap size, and its convergence with the E_F grid")
+    axB.set_xlim(-0.35, 8.4)
+    axB.set_ylim(bottom=0.0)
+    axB.legend(loc="upper left", fontsize=7.5)
+    axB.grid(alpha=0.3)
+
     plt.tight_layout()
     fig_model = FIG_DIR / "L2_model_fit.png"
     plt.savefig(fig_model, dpi=200)
@@ -213,19 +384,45 @@ def run_l2(n_boot: int = 200, seed: int = 20260921) -> Dict:
     plt.savefig(fig_traj, dpi=200)
     plt.close()
 
-    # best hard-gap candidate for the mean fit (already tracked in fit_once;
-    # recompute its rms here for reporting alongside the selection)
-    best_gap_rms = r_gap if model == "hardgap" else min(
-        _fit_nearest(data_xy, lib.gaps[eg])[2] for eg in lib.gaps)
-    best_gap_kt = eg_kt if model == "hardgap" else min(
-        lib.gaps, key=lambda eg: _fit_nearest(data_xy, lib.gaps[eg])[2])
-
     results = {
         "model": model,
         "Eg_kT": 0.0 if model == "cone" else eg_kt,
         "Eg_uncertainty_kT": 0.0 if model == "cone" else eg_uncertainty,
         "EF_trajectory_eV": [float(x) for x in EF_central],
     }
+    # residual sweep over the gap family, for the comparison figure and notes
+    gap_sweep = []
+    for g, gcurve, below in show_gaps:
+        gap_sweep.append({
+            "Eg_kT": float(g),
+            "rms": float(_fit_nearest(data_xy, gcurve)[2]),
+            "on_candidate_grid": not below,
+        })
+
+    # grid-convergence diagnostic: how much of the reported residual is the
+    # 400-point candidate grid rather than genuine model misfit
+    _scatter = np.array([
+        [reps_by_idx[i][j, 0] / np.max(np.abs(RH_mean)) - RHn[i],
+         reps_by_idx[i][j, 1] / np.max(np.abs(Rs_mean)) - Rsn[i]]
+        for i in range(n_idx) for j in range(len(reps_by_idx[i]))
+    ])
+    repeat_scatter = float(np.sqrt(np.mean((_scatter ** 2).sum(axis=1))))
+    grid_quantisation = float(np.sqrt(max(
+        r_cone ** 2 - r_cone_fine ** 2, 0.0)))
+
+    grid_convergence = {
+        "n_ef_guide": int(lib.n_ef),
+        "n_ef_diag": int(lib_fine.n_ef),
+        "r_cone_guide_grid": float(r_cone),
+        "r_cone_diag_grid": float(r_cone_fine),
+        "grid_quantisation_estimate": grid_quantisation,
+        "repeat_scatter_normalised": repeat_scatter,
+        "gap_rms_guide_grid": {f"{g:.2f}": float(_fit_nearest(data_xy, c)[2])
+                               for g, c, _ in show_gaps},
+        "gap_rms_diag_grid": {f"{e:.2f}": float(v)
+                              for e, v in fine_gap_rms.items()},
+    }
+
     meta_out = {
         "T_K": T,
         "n_index": n_idx,
@@ -234,12 +431,15 @@ def run_l2(n_boot: int = 200, seed: int = 20260921) -> Dict:
         "r_gap": r_gap,
         "best_gap_kT": best_gap_kt,
         "best_gap_rms": best_gap_rms,
+        "gap_sweep": gap_sweep,
+        "grid_convergence": grid_convergence,
         "eg_median_kT": eg_median,
         "eg_16_84_kT": [eg_lo, eg_hi],
         "EF_16_84_eV": [EF_lo.tolist(), EF_hi.tolist()],
         "frac_hardgap": frac_hardgap,
         "bootstrap_seed": seed,
         "bootstrap_n": n_boot,
+        "gate_figure": str(fig_gate.relative_to(OUTPUT_DIR)),
         "model_figure": str(fig_model.relative_to(OUTPUT_DIR)),
         "trajectory_figure": str(fig_traj.relative_to(OUTPUT_DIR)),
     }
