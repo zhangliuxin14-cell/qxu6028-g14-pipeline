@@ -232,7 +232,7 @@ def write_manifest(out, dataset, outdir=None):
     manifest = {
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "dataset": dataset,
-        "data_dir": str(data_dir.relative_to(ROOT)),
+        "data_dir": data_dir.relative_to(ROOT).as_posix(),
         "pipeline_commit": out.get("pipeline_commit"),
         "pipeline_version": PIPELINE_VERSION,
         "python": platform.python_version(),
@@ -243,7 +243,7 @@ def write_manifest(out, dataset, outdir=None):
         "n_noise": N_NOISE,
         "data_sha256": {p.name: _sha256(p) for p in files},
     }
-    target = outdir / "run_manifest.json"
+    target = outdir / ("run_manifest_blind.json" if dataset == "blind" else "run_manifest.json")
     target.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(f"wrote {target}")
     return manifest
