@@ -308,7 +308,7 @@ def main(argv=None):
     parser.add_argument("--blind", action="store_true",
                         help="shorthand for --dataset blind")
     parser.add_argument("--check", action="store_true",
-                        help="run the built-in checks only, write nothing")
+                        help="run the built-in checks only; writes only the check transcript")
     parser.add_argument("--outdir", default=None,
                         help="output folder (default: <repo>/outputs)")
     args = parser.parse_args(argv)
@@ -317,7 +317,11 @@ def main(argv=None):
     blind = dataset == "blind"
     outdir = Path(args.outdir) if args.outdir else ROOT / "outputs"
 
-    log_path = outdir / ("run_log_blind.txt" if blind else "run_log.txt")
+    if args.check:
+        # A check must not clobber the transcript of the run it is checking.
+        log_path = outdir / "run_log_check.txt"
+    else:
+        log_path = outdir / ("run_log_blind.txt" if blind else "run_log.txt")
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(log_path, "w", encoding="utf-8") as log:

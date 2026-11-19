@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 .DS_Store
+# the --check transcript is a throwaway diagnostic, not a run record
+outputs/run_log_check.txt
