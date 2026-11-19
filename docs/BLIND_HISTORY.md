@@ -76,9 +76,9 @@ JSON changes: the numbers quoted above are run D's and run E reproduces them.
 ## One disclosed deviation from a strict freeze
 
 Run A reported two features: +0.0183 at pixel (6,7) and -0.0109 at pixel (9,9).
-Pixel (9,9) is a map corner -- the same artefact the demonstrator had flagged
-for the regular data on 23 September. The interior-only rule in d41ce42 was
-added after run A, in response to seeing a corner extremum again.
+Pixel (9,9) is a map corner -- the same artefact that was diagnosed on the
+regular data on 23 September (ledger entry 5). The interior-only rule in
+d41ce42 was added after run A, in response to seeing a corner extremum again.
 
 The rule is data-independent: it excludes boundary pixels for every dataset, it
 uses no blind value to set a parameter, and it changes nothing except the

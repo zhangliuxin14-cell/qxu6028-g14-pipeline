@@ -42,7 +42,7 @@ Checks performed:
 - L2 residual recomputed from the raw CSV, outside the pipeline;
 - L3 singular values: rank(A) = 92 of 100, null space 8-dimensional;
 - L3 eta scan against the repeat-noise norm, discrepancy principle;
-- L3 features taken from the detrended map, and the demonstrator's remark about end values resolved (ledger entry 5);
+- L3 features taken from the detrended map, so that a boundary extremum cannot be reported as a defect (ledger entry 5);
 - the pass/fail threshold read back from the brief: max abs(m) <= 0.030.
 
 ## Session 4 — 2026-11-19: consolidation and blind test
