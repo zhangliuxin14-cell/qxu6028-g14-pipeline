@@ -1,77 +1,105 @@
-# AI 错误账本 — G14
+# AI error ledger — G14 (Jiale Zhang, Zijian Zhou)
 
-> 规则：记录 AI 生成的具体错误、如何检测、如何纠正。满分的账本至少含两个真实"物理/方法"错误，每个都有检测与纠正证据。通用"AI 有 bug"式条目得分很低。
+Brief requirement: at least one specific, verifiable error in AI-generated work,
+with how it was detected and corrected. A generic "the AI can be wrong" entry
+scores nothing; the entries below are the seven that actually happened, in the
+order they happened. Every number can be reproduced with the pipeline command
+given in the entry, and every fix is guarded by a check in reproduce.py
+_validate() so that the same mistake cannot silently return.
 
 ---
 
-## 条目 1：L3 零空间维度误判（物理解释错误）
+## Entry 1 — L1: the 10^4 mobility trap
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 日期 | 2026-09-21 |
-| 阶段 | L3 管道开发 |
-| AI 声称 | 初版实现与讨论默认"只有常数模式不可恢复"（沿用指南 README 的原话"矩阵无法恢复常数偏移"），未检查奇异值谱 |
-| 检测 | 按 brief 5.3 第 1 步检查奇异值：打印 A 的 SVD，发现 5 个 ≈0（<1e-15）奇异值；精确计算后确认 **rank(A)=92，零空间 8 维**（除常数外还有 7 个高频棋盘状模式） |
-| 纠正 | 在 `src/l3.py` 中加入奇异值谱输出与零空间正交性检验（m_hat 与 8 个零模式点积 <7×10⁻⁴）；方法图增加奇异值面板；brief note 与报告将"探针盲区为 8 维"作为真实发现呈现 |
-| 物理意义 | 探针结构（64 位置×2 取向的投影测量）固有无法感知 7 种高频不均匀模式——这是分辨率结论的一部分（除 1.44 间距的点扩展宽度外） |
+| Date | 2026-09-21 (Session 2) |
+| Stage | L1 forward model, src/l1.py |
+| AI output | First draft of the mobility step followed an SI-units habit and "converted" the sheet density by 10^4 before dividing, i.e. mu = 1/(e n 10^4 rho). |
+| Why it is wrong | The guide warns explicitly against an extra 10^4. Dimensional analysis: n is in cm^-2 and rho in ohm/sq, so e n rho has units C ohm cm^-2 = (cm^2 / (V s))^-1 and 1/(e n rho) is already in cm^2/Vs. Nothing has to be converted. |
+| Detection | (i) the guide sentence; (ii) dimensional check; (iii) the reference ratios C(0) = 1.00, C(0.10) = 2.60, C(0.20) = 5.10 still passed with the wrong factor, so the reference checks alone would not have caught it -- it was caught by the units, not by the tests. |
+| Correction | mu_corr = 1/(e n_F rho) with the derivation in a code comment; the identity mu_corr / mu_band = C(E_F,op) was made an assertion, which a stray 10^4 would break. |
 
-## 条目 2：L1 迁移率单位陷阱（被检查拦截的潜在错误）
+## Entry 2 — L3: the null space is 8-dimensional, not 1
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 日期 | 2026-09-21 |
-| 阶段 | L1 实现 |
-| 风险 | 指南明确警告"不要在迁移率中插入额外的 10⁴ 因子"。AI 初稿使用 SI 单位思路时一度按 m⁻²/V·s 与 cm²/V·s 换算考虑额外因子 |
-| 检测 | 单位分析：n[cm⁻²]·ρ[Ω/sq]·e[C] = (cm²)⁻¹·Ω·C = (cm²/V·s)⁻¹（1/(Ω·C) = V·s/C·...），直接 1/(e·n·ρ) 已给出 cm²/V·s，无需 10⁴。与指南参考检查（1.00/2.60/5.10）交叉验证一致 |
-| 纠正 | 代码注释明确单位推导；验证 μ_corr/μ_band = C(E_F,op) 恒等关系成立 |
+| Date | 2026-09-21 (Session 2) |
+| Stage | L3 inverse problem, src/l3.py |
+| AI output | First implementation repeated the guide's wording that "the matrix cannot recover a constant offset", implying the only unrecoverable mode is the constant vector. |
+| Detection | Following brief 5.3 step 1, the singular values of A (128 x 100) were printed: five of them are below 1e-15. A rank computation then gave rank(A) = 92, so the null space has dimension 8: the constant mode plus seven high-spatial-frequency, checkerboard-like modes. |
+| Correction | The singular-value spectrum and a null-space orthogonality test (|<m_hat, n_k>| < 7e-4 for all eight basis vectors) were added to the pipeline and to the method figure. The report states the eight-dimensional blind spot instead of repeating the guide. |
+| Why it matters | The unrecoverable modes are part of the resolution answer: the probe geometry (64 positions x 2 orientations) cannot see those seven patterns at all, no matter how small eta is. |
 
-## 条目 3：L2 输运代理公式拓扑错误（物理/方法错误 — 导致 R_H–R_xx 拟合完全错误）
+## Entry 3 — L2: the transport proxies had the wrong topology (rms 0.4470)
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 日期 | 2026-09-23 |
-| 阶段 | L2 逆问题实现 |
-| AI 声称 | 用 `R_H = 1/(n − p)`、`R_s = 1/(n + p)` 作为"原始 Hall 与薄层电阻代理（e=1, μ=1；尺度稍后抵消）" |
-| 症状 | `L2_model_fit.png` 中模型曲线与数据点严重分离（rms = **0.4470**），数据点全部落在曲线一侧 |
-| 检测 | ① 手册 L2 GATE（第 4 页）："归一化后 R_H 仍须在中性点过零；理想锥翼部 \|R_H\| ∝ R_xx²"。而 `1/(n−p)` 在中性点**发散**，模型 R_H 范围只有 [−0.316, +1.000]（数据为 [−1.000, +0.985]），且模型 R_xx 在中性点取**极小**（归一化 0.134），数据却取**极大**（1.000）——拓扑相反。② 指南第 7 页 "Important orientation check" 要求模型曲线连续穿过 R_H 符号变化，发散形式无法满足。③ 参数化扫描 `R_H=(p−n)/(n+p)^α`、`R_s=1/(n+p)^β`（α∈{1,1.5,2,2.5,3}, β∈{0.5,1,1.5,2} 共 20 种） |
-| 纠正 | 改为等迁移率双载流子标准结果 `R_H = (p − n)/(n + p)²`、`R_s = 1/(n + p)`（`src/l2.py: rh_rs_from_np`）。扫描显示 **(α,β)=(2,1) 是唯一同时满足最低 rms 与 R_xx 在中性点取极大的形式**（rms 0.0140；唯一另一个 rms 接近的 (3,1.5) 给出 Rsn@RHn=0 = 0.049，与数据矛盾）|
-| 验证 | r_cone 从 0.4470 降到 **0.01396**；数据自身重复散度为 0.01350，比值 **1.03** → 残差已是纯噪声，模型无系统偏差。模型与数据的 R_H 符号在全部 51 个索引一致。手册 GATE 的 \|R_H\| ∝ R_xx² 在模型（1.52 ± 0.08）与数据（1.3–1.7）上同量级 |
-| 影响 | ① **模型选择结论不变**（cone，E_g = 0；bootstrap 硬带隙比例 0/200 → 1/200），但依据从"两模型都拟合失败"变为"两模型都拟合到噪声下限"，结论更可信；② **费米轨迹符号翻转并修正**：原 +0.067 → −0.149 eV 改为 **−0.068 → +0.146 eV**。原轨迹之所以符号相反，正是因为 `1/(n−p) = −1/(p−n)` 相对标准约定多了一个负号；③ 新增 `L2_gate.png`（手册第 6 页第 3 步要求的门检图，原先缺失） |
-| 残留局限 | 最近曲线拟合对 (p−n) 与 (n−p) 两种符号约定**简并**（互为镜像，rms 0.01396 vs 0.01354），故 E_F 漂移的**方向**不能由拟合本身判定；本管道采用标准物理约定（R_H > 0 ⇒ p 型 ⇒ E_F 在 Dirac 点下方），并已在 brief note 中说明 |
-| 回归防护 | `reproduce.py` 的 `_validate` 新增三项检查：模型曲线须穿过 R_H = 0、R_s 须在该处取极大、翼部 \|R_H\|/R_s² 的相对标准差 < 0.15。重新引入 `1/(n−p)` 会立即让这三项失败 |
+| Date | 2026-09-23 (Session 3) |
+| Stage | L2 nearest-curve fit, src/l2.py: rh_rs_from_np |
+| AI output | R_H = 1/(n - p) and R_s = 1/(n + p) were used as "raw Hall and sheet-resistance proxies (e = mu = 1, the scale cancels in the normalisation)". |
+| Symptom | L2_model_fit.png showed the model curve completely separated from the data, rms = 0.4470, with every data point on one side of the curve. |
+| Why it is wrong | 1/(n - p) diverges at the neutrality point, so the model's R_H range was only [-0.316, +1.000] against the data's [-1.000, +0.985], and the model R_xx had its minimum where the data have their maximum (0.134 vs 1.000). The topology is inverted. The handbook gate (p.4) requires the normalised R_H to pass through zero at neutrality and the wings to obey |R_H| proportional to R_s^2; a divergent form cannot satisfy it. |
+| Detection | (i) the handbook gate; (ii) the guide's "important orientation check" on p.7; (iii) a scan over R_H = (p - n)/(n + p)^a and R_s = 1/(n + p)^b with a in {1, 1.5, 2, 2.5, 3} and b in {0.5, 1, 1.5, 2} -- twenty forms scored against the data. |
+| Correction | The standard two-carrier result for equal mobilities, R_s = 1/(n + p) and R_H = (p - n)/(n + p)^2, is the unique member of the scanned family that both minimises the residual and puts the R_xx maximum at the R_H zero. r_cone fell from 0.4470 to 0.01396. |
+| Side effect | The Fermi-level path changed sign, from +0.067 -> -0.149 eV (wrong) to -0.068 -> +0.146 eV (right), because 1/(n - p) carries an extra minus sign relative to the standard convention. |
+| Guard | Three checks in _validate(): the model curve must cross R_H = 0, R_s must peak there, and the relative standard deviation of |R_H|/R_s^2 over the outer indices must stay below 0.15. Re-introducing 1/(n - p) fails all three. |
 
-## 条目 4：L2 残差"已达噪声下限"的过度解读（数值巧合当成了结论）
+## Entry 4 — L2: "the residual has reached the noise floor" was a numerical coincidence
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 日期 | 2026-09-23 |
-| 阶段 | L2 结果解释与 brief note 撰写 |
-| AI 声称 | "r_cone = 0.01396，与数据重复散度 0.01350 之比 **1.03** → 模型残差完全是测量噪声，已达噪声下限，无系统性偏差" |
-| 检测 | 小组成员追问"为什么最优候选 E_g=0.50 kT 的残差 (0.01362) 反而比网格外的 0.25 kT (0.01313) 大"，与"能隙→0 应连续回到 cone"的物理预期矛盾。追查发现排序在 400 点候选 E_F 网格下是非单调的；把网格加细到 1600/6400 点后排序翻转为单调（cone 最低） |
-| 纠正 | ① 确认比值 1.03 是**巧合**：它只是"网格量化 ≈ 测量噪声"这一偶然相符，并非"模型残差 = 噪声"。误差预算：400 点网格量化 ≈ **0.0127**，测量重复散度 = **0.01350**，真实模型-数据距离（6400 点收敛值）= **0.00580**，后者仅为噪声的 **0.43 倍**。② brief note 中该条已重写为收敛后的正确表述；③ 模型图 (b) 加入 6400 点收敛曲线作为诊断；④ `_meta.L2.grid_convergence` 记录全部数值 |
-| 为何重要 | 原表述虽指向正确结论（模型无系统偏差），但**夸大了报告残差的物理含义**：报告的 0.01396 主要来自网格量化而非模型失配。若被追问"残差里有据可依的部分是多少"，原表述会给出错误答案。修正后的表述更强：真实失配只有噪声的 0.43 倍 |
-| 影响 | 选型结论完全不变（cone，E_g=0；两种网格下都没有候选能进入 0.85·r_cone 带）。但**新增了一条量化边界**：E_g ≲ 1 k_BT 范围内残差差异（≤6%）低于 15% 判据且受网格量化污染，不可作为能隙证据 |
-| 残留局限 | 400 点是**指南规定**的候选网格（为与数据生成器一致），因此报告值必须保留 400 点结果；收敛网格只能作为诊断，不能替换报告值。已在 brief note 中明确区分 |
+| Date | 2026-09-23 (Session 3) |
+| Stage | L2 interpretation and brief note |
+| AI output | "r_cone = 0.01396, repeat scatter 0.01350, ratio 1.03, so the residual is pure noise and the model has no systematic bias." |
+| Detection | A group member asked why the best candidate inside the grid, E_g = 0.50 kT, had a larger residual (0.01362) than a value outside it, 0.25 kT (0.01313), when a shrinking gap should return continuously to the cone. Refining the candidate E_F grid to 1600 and 6400 points made the ordering monotonic again. |
+| What was actually true | The 400-point grid quantises the curve and adds a floor of about 0.0127 to every residual, comparable to the repeat scatter of 0.01350. The converged model-data distance is 0.00580, i.e. 0.43 of the noise. So the ratio 1.03 was a coincidence between the grid floor and the noise, not evidence that the model fits perfectly. |
+| Correction | The brief note now distinguishes the reported 400-point residual from the converged value, the convergence table is stored in _meta.L2.grid_convergence and plotted as a diagnostic panel, and the report says explicitly that E_g below about 1 kT cannot be resolved because the residual differences there are smaller than the 15% rule and contaminated by quantisation. |
+| Guard | The 400-point grid is kept because the assessment specifies it; the convergence table is diagnostic only and cannot replace the reported value. |
 
-## 条目 5：L3 把晶圆级平面趋势的角点当成"缺陷特征"（特征定位错误 — 老师指出的问题）
+## Entry 5 — L3: the wafer-scale tilt was reported as a defect (corner artefact)
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 日期 | 2026-09-23 |
-| 阶段 | L3 特征定位 |
-| 症状 | 老师明确指出：**最优解（特征）所在位置不是端值**。而 `results.json` 里 L3 特征坐标为 `(+2.7,+2.7)` 与 `(−2.7,−2.7)`——正好是 `np.linspace(-2.7, 2.7, 10)` 的两个**端点值**，两个极值都落在图角上 |
-| AI 声称 | 初版 `_merge_features` 直接取**全图** max/min 作为特征，理由是"指南要求报告 largest positive and negative extrema" |
-| 检测 | ① 全图极值落在图角，与"缺陷"的物理含义矛盾；② **匹配滤波**（在平面趋势基础上逐像素加单点特征，看残差改善）给出最佳像素 (7,5)、(6,5)、(7,6)、(6,6)、(3,4)、(3,3)——**无一在边界**；③ 把平面趋势投影掉后，全部 **29 组**数据的**主导特征**都严格落在内部（0/29 在边界），这是生成器的设计属性，随机过程不可能如此；④ 直接拟合"纯平面趋势"的残差是噪声的 3005 倍，说明数据同时含趋势与局域结构，两者必须分开 |
-| 纠正 | `src/l3.py` 新增 `_ramp_detrend()`：先最小二乘拟合平面趋势 m ≈ a + b·x + c·y，再从去趋势图 `_merge_features()` 提取特征（半峰判据合并相邻像素）；趋势本身作为"晶圆级梯度"单独记录 |
-| 验证 | G14 特征改为 **+0.0179 @ (x,y)=(+0.3,+1.5)** 与 **−0.0142 @ (−0.9,−0.9)**，均在图内部；29 组交叉验证：主导特征内部 29/29 |
-| 顺带修正 | 同一轮检查发现 **η₀ 严重过正则化**：η₀ 处残差 = 12.80 × 重复噪声范数（即重建根本没拟合数据）。指南允许在噪声给出明确理由时另选 η，故改为**差异原则**：取残差仍与噪声一致的**最大** η = 5.7×10⁻² η₀（残差 1.00 × 噪声），落在指南扫描区间的内部。分辨率 1.44 → **1.80 间距**，检测限 2.36×10⁻⁵ → **6.46×10⁻⁵**（因为选定 η 更小、更多噪声通过）；**FAIL（clear）决策不变**（a−δ₉₅ = 0.0456 > 0.030）|
-| 回归防护 | `reproduce.py` 新增 5 项 L3 检查：特征须来自去趋势图、主导特征须在图内部、特征峰值须小于全图极值、η 须落在扫描区间内、扫描区间须跨越噪声水平 |
+| Date | 2026-09-23 (Session 3) |
+| Stage | L3 feature extraction, src/l3.py |
+| Symptom | The demonstrator pointed out that the optimum solution is not at an end value. The reported feature coordinates were (+2.7, +2.7) and (-2.7, -2.7), exactly the two endpoints of np.linspace(-2.7, 2.7, 10): both extrema sat on the map corners. |
+| AI output | The first _merge_features took the global max and min of the map as "the largest positive and negative extrema", which is what the guide's wording appears to ask for. |
+| Why it is wrong | A planar trend has its extrema on the boundary by construction, so a boundary extremum is the trend, not a defect. Fitting a pure plane leaves a residual 3005 times the noise, so the data contain both a wafer-scale tilt and local structure and the two must be separated. |
+| Detection | (i) the corner coordinates themselves; (ii) matched filtering -- injecting a single-pixel source at each pixel and looking at the residual improvement -- pointed to interior pixels (7,5), (6,5), (7,6), (6,6), (3,4), (3,3), none on the boundary; (iii) across all 29 released datasets, the dominant feature after detrending was interior in 29 of 29 cases, which a random process would not produce. |
+| Correction | A least-squares plane is fitted and subtracted first (_ramp_detrend), features are taken from the detrended map with a half-maximum merge rule, and the tilt is reported separately as the wafer-scale gradient (6.03e-3 per pitch). G14 features became +0.0179 at (+0.3, +1.5) and -0.0142 at (-0.9, -0.9). |
+| Same session | The check also exposed eta_0 over-regularisation: at eta_0 the residual is 12.80 times the repeat-noise norm, i.e. the reconstruction does not fit the data. The discrepancy principle gives eta = 5.7e-2 eta_0, the largest value whose residual still matches the noise (1.00 x). Resolution 1.44 -> 1.80 pitches and detection limit 2.36e-5 -> 6.46e-5 follow; the FAIL (clear) decision does not change. |
+| Guard | Five checks: features must come from the detrended map, the dominant one must be interior, its magnitude must be below the raw map extremum, eta must lie inside the scanned range, and the scanned range must bracket the noise level. |
 
-## 条目 6：（模板 — 由小组成员记录后续真实错误）
+## Entry 6 — reproduce.py: --dataset blind crashed on a missing template (2026-11-19)
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 日期 | 待填 |
-| AI 声称 | 待填 |
-| 检测 | 待填 |
-| 纠正 | 待填 |
+| Date | 2026-11-19 (Session 4, repository consolidation) |
+| Stage | reproduce.py, results template handling |
+| AI output | The earlier reproduce.py rebound common.RESULTS_TEMPLATE to <blind folder>/results_template.json for the blind run. |
+| Symptom | python reproduce.py --blind died with FileNotFoundError: data/blind_G14/results_template.json, before writing any result. The blind pack ships data and a manifest, not a results template. |
+| Detection | Running the blind command on the clean copy; the traceback names the missing file. |
+| Correction | The template is a property of the output schema, not of the dataset, so src/common.py now points at data/results_template.json at the repository root and both runs share it. Verified by running both datasets end to end in one session. |
+| Guard | The blind run is part of the acceptance procedure, not an afterthought: reproduce.py --dataset blind must write blind_results.json and pass all checks. |
+
+## Entry 7 — reproduce.py: the blind run silently recomputed the regular data (2026-11-19)
+
+| | |
+|---|---|
+| Date | 2026-11-19 (Session 4) |
+| Stage | src/l1.py, src/l2.py, src/l3.py data binding |
+| AI output | The lab modules used "from .common import DATA_DIR", which copies the Path object at import time, while reproduce.py rebound common.DATA_DIR at run time to point at the blind folder. |
+| Symptom | None -- and that is the point. python reproduce.py --blind ran to completion, reported "all checks passed" and wrote outputs/blind_results.json. The numbers in it were the regular numbers, because the modules were still reading data/regular_G14 and the checks were validating the regular values they had just computed. |
+| Detection | Comparing the blind output with the regular output: identical L1 values to the last digit, which is impossible for an independent dataset. |
+| Correction | The modules import the module (from . import common) and read common.DATA_DIR inside the functions, so the run-time rebinding is seen. reproduce.py also records dataset_set in the results and _validate checks it, so a regular result can no longer be passed off as a blind one. |
+| Why it is in this ledger | This is the most dangerous class of AI error we met: a silent fallback that produces a plausible, green-ticking, wrong artefact. The fix is not just the import -- it is making the wrong state detectable, so the same mistake cannot pass review again. |
+
+---
+
+## What this ledger is not
+
+It is not a list of every AI mistake; it is the list of mistakes that changed a
+number in the submission, plus the two that changed an artefact's provenance.
+Typos and formatting errors are excluded because they do not test anything.
+Each entry is written so that a reader can re-run the check that caught it.

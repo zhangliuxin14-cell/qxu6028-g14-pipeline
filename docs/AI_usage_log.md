@@ -1,45 +1,64 @@
-# AI 使用日志 — G14
+# AI usage log — G14
 
-> 规则：记录每次实质性 AI 使用——工具、用途、提示要点、贡献范围。本文件由小组持续更新。
+Brief requirement: a log of every substantive use of generative AI, with the
+tool, the purpose and the scope of what the AI contributed. Entries are listed
+in the order the work happened. Supporting documents: docs/AI_error_ledger.md
+for the specific errors, docs/AUTHORSHIP.md for how AI output maps onto the
+commit history.
 
-## 1. 管道搭建（GitHub Copilot，VS Code 对话代理）
+---
 
-| 项 | 内容 |
+## 1. Session 2 — L1 pipeline and repository skeleton
+
+| | |
 |---|---|
-| 日期 | 2026-09-21 |
-| 工具 | GitHub Copilot（VS Code Chat，DeepSeek 模型，agent 模式） |
-| 用途 | 阅读手册/指南，搭建 L1/L2/L3 复现管道（`src/l1.py`、`l2.py`、`l3.py`、`reproduce.py`），生成图表与文档初稿 |
-| 提示要点 | 提供指南中的精确方程、积分限、网格、15% 规则、η₀ 公式、种子；要求用断言验证 1.00/2.60/5.10 参考值与形状检查 |
-| 贡献范围 | 全部代码初稿、图表、docs 初稿由 AI 生成；**所有数值经过小组独立验证**（参考比率、零交叉、奇异值谱、η 敏感性）后才采纳 |
+| Date | 2026-09-21 |
+| Member | Jiale Zhang |
+| Tool | Visual Studio Code with a chat agent running a DeepSeek model (API key supplied by a coursemate; the key belonged to that coursemate, not to the group) |
+| Purpose | Read the handbook and the practical methods guide, then build the L1 analysis and the first version of the repository |
+| What was asked | Implement the two carrier counts (band-edge integral from E = 0 and Fermi-referenced integral from E = E_F), the correction factor, the mobility at the operating point, the sweep figure, and assertion checks against the guide's reference values 1.00 / 2.60 / 5.10. Set up src/ with a shared constants module and a reproduce.py entry point. |
+| What the AI produced | src/common.py, src/l1.py, the L1 figure, the checkpoint note and the repository layout, in one pass |
+| What we checked before accepting | The three reference ratios recomputed by hand; the units of the mobility step (the AI's first version inserted a spurious 10^4, entry 1 of the ledger); that the operating point was evaluated at the exact E_F,op rather than the nearest table row; that the figure axis labels carried units |
+| What we rejected | The 10^4 conversion, and an early version that integrated from E_F over only the tabulated rows -- the table is sparse near the band edge, so the integral had to be done on a fine grid, not on the CSV |
+| Recorded in | commit e18aa4b (initial pipeline), commit c19de7c (L1 checkpoint package) |
 
-## 2. L3 奇异值检查（同工具，验证性使用）
+## 2. Session 3 — L2 and L3 (Zijian Zhou)
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 用途 | 精确打印 A 的奇异值谱与零空间基，确认零空间维度（发现为 8 维而非指南显式声明的 1 维常数模式） |
-| 结果 | 发现 7 个额外高频零模式；重建图与所有零模式正交（<7×10⁻⁴）→ 纳入报告"检查奇异值"证据 |
+| Date | 2026-09-23 |
+| Member | Zijian Zhou |
+| Tool | Visual Studio Code with a chat agent running a DeepSeek model on his own API key |
+| Purpose | Build the L2 zero-dimensional inverse problem (model library, nearest-curve fit, 15% rule, bootstrap, Fermi path) and the L3 regularised 2-D reconstruction (SVD, Tikhonov, eta scan, resolution, detection limit, pass/fail) |
+| What was asked | Read the L2/L3 sections of the guide literally, implement each required check, and diagnose two visible failures: the L2 model curve sitting away from the data, and the L3 feature coordinates landing on the map corners |
+| What the AI produced | src/l2.py and src/l3.py, the six figures, brief notes for both labs, and the diagnosis of both failures (ledger entries 3 and 5) |
+| What we checked before accepting | The handbook L2 gate (R_H crosses zero at neutrality, R_s peaks there, wings scale as R_s^2) evaluated numerically on the model curves; the 20-form (a, b) scan re-run independently; the residual recomputed from the raw CSV without the pipeline; the null-space dimension recomputed by SVD; the eta scan plotted against the noise norm; the pass/fail threshold read back from the brief |
+| What we rejected | The first transport proxies R_H = 1/(n - p), R_s = 1/(n + p), which are topologically wrong (rms 0.4470); the global-extremum feature extraction; the claim that the residual had "reached the noise floor" at 400 points |
+| Recorded in | commit 93102f0 (import of the L2/L3 working copy into the shared repository, message names the author), ledger entries 3, 4, 5 |
 
-## 3. L2 拟合诊断与修复（同工具，调试性使用）
+## 3. Session 4 — repository consolidation, verification and writing
 
-| 项 | 内容 |
+| | |
 |---|---|
-| 日期 | 2026-09-23 |
-| 用途 | 排查 `L2_model_fit.png` 中模型曲线与数据点严重分离（rms = 0.4470）的原因，并修正模型方程 |
-| 提示要点 | 要求 AI 对照手册的 L2 GATE 与指南第 7 页 orientation check，量化对比候选输运代理形式，并给出可复现的证据（不是"看起来更合理"） |
-| AI 贡献 | 定位到 `rh_rs_from_np` 使用 `R_H = 1/(n−p)`（中性点发散、R_xx 在中性点取极小），改为等迁移率双载流子结果 `R_H = (p−n)/(n+p)²`、`R_s = 1/(n+p)`；执行 20 种(α,β)参数化扫描；新增 L2 gate 图与三项回归检查 |
-| 贡献范围 | AI 提出候选形式与扫描；**小组独立验证**：r_cone 降至 0.01396 且与数据重复噪声 0.01350 的比值 = 1.03（残差达噪声下限）、模型与数据 R_H 符号在 51/51 索引一致、gate 关系 \|R_H\| ∝ R_xx² 在模型与数据上同量级。模型选择结论（cone，E_g=0）未变，但 E_F 轨迹符号被修正为 −0.068 → +0.146 eV |
-| 记录 | 完整错误、检测与纠正过程见 `AI_error_ledger.md` 条目 3；据此修正 `brief_note_L2.md`、`self_assessment.md` 与 `README.md` |
+| Date | 2026-11-19 |
+| Member | Jiale Zhang |
+| Tool | DeepSeek Harness coding agent (DeepSeek model, agent mode in a local session) |
+| Purpose | Turn the working copy into a repository that a marker can run: fix the two data-path bugs, add the dataset selector, run log, run manifest and --check mode, regenerate every output, write the authoring records, and draft the report |
+| What the AI produced | The reproduce.py CLI, the DATA_DIR and results-template fixes, the run manifest and log capture, the checks added to _validate(), the English README, this log and the error ledger, docs/AUTHORSHIP.md, docs/BLIND_HISTORY.md, docs/CHECKPOINTS.md, tools/contribution_report.py, the report draft and the figures for it |
+| What we checked before accepting | Both datasets run end to end and exit 0; --check exits 0; every number in the report traced back to a key in results.json; the blind output compared with the regular output (this comparison is what caught ledger entry 7); a clean clone of the repository run from scratch; the word count of the report |
+| What we rejected | The first blind run's output, which was a silent copy of the regular numbers; a first attempt at splitting the run log that crashed on Windows console encoding; an early version of the manifest that was overwritten by the blind run |
+| Recorded in | commits fa4d1d0, 2204f04, 9f10e43, 50ff23e, f536ce8, 8eb5923, ledger entries 6 and 7 |
 
-## 4. L3 特征定位与 η 选择修复（同工具，调试性使用）
+## 4. What was not AI-generated
 
-| 项 | 内容 |
-|---|---|
-| 日期 | 2026-09-23 |
-| 用途 | 排查老师指出的"最优解位置不是端值"：L3 特征坐标落在 ±2.7（坐标端值），并复核 L2 的 gap 落在候选网格下界 0.50 kT 是否也是同类问题 |
-| AI 贡献 | ① 校验数据来源：与 `manifest.json` 的 sha256 及 `03_Regular_Data/regular_G14` 逐位比对；② 用 `03_Regular_Data` 全部 29 组做交叉验证（L2：29 组中含 15 组能稳定找回内部 gap 2.0–6.0 kT，说明方法有分辨力；L3：29 组的主导去趋势特征全部在内部）；③ 定位 L3 缺陷：`_merge_features` 取全图极值 → 改为先去平面趋势再取特征；④ 发现 η₀ 残差 = 12.8 × 噪声，改用差异原则选 η = 5.7e-2 η₀ |
-| 贡献范围 | AI 提出诊断方案与修复；**小组独立验证**：匹配滤波（逐像素单点注入的残差改善）给出的最佳像素 (7,5)、(3,3) 与去趋势极值一致；强制零趋势会使残差从 0.90 × 噪声升到 3388 × 噪声，证明趋势是数据强制的；G14 的特征在 η 从 0.01× 到 1×η₀ 之间完全稳定 |
-| 记录 | 完整过程见 `AI_error_ledger.md` 条目 5；据此修正 `brief_note_L3.md`、`README.md`、`self_assessment.md` |
+The group chose the questions to ask, decided which model forms were physically
+acceptable, checked every number that appears in the report, ran the checks in
+Section 3 by hand, and wrote the contribution statement and this log. The AI
+never had access to the blind results at the time the analysis choices for L1-L3
+were frozen, and the blind run uses the identical code path.
 
-## 5. （待小组成员补充后续使用）
+## 5. Declaration
 
-- 例如：报告撰写、盲测调试等，逐条记录。
+No AI output was submitted without a check recorded here or in the error
+ledger. Where an AI output was wrong, the error, the detection and the
+correction are in docs/AI_error_ledger.md.

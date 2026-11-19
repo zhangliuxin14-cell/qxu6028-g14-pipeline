@@ -1,20 +1,33 @@
-# 贡献声明 — G14（模板，需全组签名同意）
+# Contribution statement — G14
 
-> 规则：无签名的贡献声明 → 个人贡献分为 0。声明需与仓库提交历史、会话检查记录一致。
+Signed by every member of the group. Contributions below are the substantive
+ones: each maps to commits (short hash), to files in the repository, or to a
+recorded checkpoint, so a reader can verify it with git log rather than taking
+it on trust.
 
-| 成员（姓名 + ID） | 主要贡献（哪个阶段、哪些文件/分析） | 签名 |
+| Member | Student ID | Contribution | Evidence |
+|---|---|---|---|
+| Jiale Zhang | TODO_STUDENT_ID_ZHANG | Session 2: L1 forward model, correction factor and mobility, reference checks, first repository layout and checkpoint package. Session 4: pipeline consolidation (dataset selector, run log, run manifest, --check), the two data-path fixes, the regenerated outputs, the report and the checking of every reported number. | e18aa4b, c19de7c, fa4d1d0, 2204f04, 9f10e43, 50ff23e, f536ce8, 8eb5923; src/l1.py, reproduce.py, README.md, report/ |
+| Zijian Zhou | TODO_STUDENT_ID_ZHOU | Session 3: L2 model library, nearest-curve fit and 15% rule, bootstrap, Fermi-level path; L3 SVD and null-space analysis, Tikhonov reconstruction, eta selection, resolution and detection-limit measurements, pass/fail decision; diagnosis of the corner-feature artefact. Session 4: review of the L2/L3 modules after the data-path fix, re-run of both labs and sign-off on the reported values. | 93102f0 (import of his working copy, author named in the commit message); src/l2.py, src/l3.py, docs/brief_note_L2.md, docs/brief_note_L3.md, docs/run_artifacts/ |
+
+## Sessions
+
+| Session | Date | Members present | Work |
+|---|---|---|---|
+| 1 | 2026-09-20 | both | Read the brief, handbook and guide; split L1 (Jiale) from L2/L3 (Zijian) |
+| 2 | 2026-09-21 | both | L1 complete, checkpoint package submitted; L2/L3 design agreed |
+| 3 | 2026-09-23 | both | L2 and L3 complete, both visible failures diagnosed and fixed |
+| 4 | 2026-11-19 | both | Repository consolidation, blind run, report, records |
+
+## Statement
+
+We confirm that this statement is accurate, that the work above was carried out
+by the named members, and that AI assistance is disclosed in
+docs/AI_usage_log.md and docs/AI_error_ledger.md. We understand that a
+contribution statement not signed by all members scores zero for individual
+contribution.
+
+| Member | Signature | Date |
 |---|---|---|
-| 待填 | 待填 | |
-| 待填 | 待填 | |
-| 待填 | 待填 | |
-| 待填 | 待填 | |
-
-## 参考贡献点（按仓库实际调整）
-
-- L1：`src/l1.py` 正向模型、参考检查断言、修正因子解释、传感器建议
-- L2：`src/l2.py` 模型库、最近曲线拟合、15% 规则、bootstrap 不确定性、轨迹图
-- L3：`src/l3.py` 正则化重建、奇异值/零空间检查、分辨率与检测限测试、pass/fail 决策
-- 管道：`reproduce.py`、种子固定、干净复现验证、git 提交历史维护
-- 文档：brief notes、AI 账本/日志、报告撰写、Transfer 段
-
-> 注：每人的"有意义贡献"需能在 git 历史与 checkpoint 记录中找到对应证据。跨 2 个阶段 +5 分、跨 3 个阶段 +10 分的广度加分以声明+证据为准。
+| Jiale Zhang | | |
+| Zijian Zhou | | |

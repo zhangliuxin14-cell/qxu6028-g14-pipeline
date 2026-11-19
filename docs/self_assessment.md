@@ -1,15 +1,22 @@
-# 批判性自我评估 — G14（模板，150–200 词）
+# Critical self-assessment — G14
 
-> 规则：点名两个真实弱点并给出可信的补救方案。语气自信与否不是标准。
+Two weaknesses limit this submission.
 
-## 弱点 1：L3"晶圆级趋势"与"局域缺陷"的划分是一个建模选择，且零空间解释不深
+First, our reported L2 residual is dominated by the assessment's 400-point
+Fermi-level grid, not by model mismatch. The grid adds a quantisation floor
+near 0.0127, close to the repeat scatter of 0.0135, so r_cone = 0.0140
+overstates how badly a cone fits; refining to 6400 points gives 0.0058, about
+0.43 of the noise, and only there does the ordering of candidate gaps become
+monotonic. We keep the 400-point value because the assessment specifies that
+grid, label it grid-limited, and publish the convergence table as a diagnostic.
+The proper fix is to solve along each model curve instead of sampling 400
+candidate Fermi levels.
 
-我们把平面趋势（6.0×10⁻³/间距）当作工艺梯度、把去趋势后的极值当作缺陷。但只有 100 个像素，一块**本来就很宽**的真实缺陷会被平面拟合吸收一部分，使幅度被低估（重建对单像素点源也有约 0.45 的衰减）。补救：对每个特征注入已知幅度的合成缺陷并报告恢复系数，按此给出幅度的置信区间；用各向同性/二次趋势做对照，说明结论对趋势阶数的敏感性。另外 A 的零空间为 8 维，我们只报告了其存在与正交性，没有逐一解释 7 个额外高频盲区的探针几何来源。补救：按空间频率分类零模式，并与 64 个放置坐标的覆盖图对比，指出哪些源于"每位置两次测量的冗余"。
+Second, we chose eta by the discrepancy principle (5.7e-2 eta_0) rather than the
+guide's default, which is defensible but not optimal: it trusts a noise norm
+estimated from only three repeats. Generalised cross-validation over an
+estimated noise covariance would use the data better, at the cost of a longer
+method section.
 
-## 弱点 2：L2 的报告残差被候选 E_F 网格量化主导，且分辨率沿轨迹极不均匀
-
-最近曲线拟合测的是到模型曲线**离散采样点**的距离，而曲线只在指南规定的 400 个候选 E_F 上采样。这给每个残差加了量化地板 ≈0.0127，与测量重复散度 0.01350 同量级——即**报告的 r_cone = 0.01396 里，主要成分不是模型失配**（网格收敛到 6400 点后为 0.00580，仅为噪声的 0.43 倍）。这个地板还随曲线略微变化，导致 400 点下 0.25 k_BT 的残差反常地低于 cone，直到加细网格才恢复单调排序。另外 E_F 分辨率沿轨迹相差 40 倍（中性点 ≈0.16 meV，翼部 ≈7.5 meV），51 个索引中有 5 处平台。补救：把报告值明确标注为"指南网格下的值"并附收敛诊断（已做，见模型图 (b) 与 `_meta.L2.grid_convergence`）；对中性点附近做局部加细网格只用于报告分辨率极限；在 bootstrap 中逐索引给出 16–84% 带宽，如实说明哪些漂移不可分辨。
-
----
-
-（由小组成员按实际情况修改；确保总字数 150–200 词）
+A smaller limitation: we measure the eight-dimensional null space but do not
+explain each mode by probe geometry.
