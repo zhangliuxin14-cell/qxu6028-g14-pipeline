@@ -20,6 +20,7 @@ outputs/run_manifest_blind.json, outputs/figures_blind/ and outputs/pipeline_com
 | B — submitted | 2026-11-19 19:30 | d41ce42 | re-run after the interior-feature rule (see the deviation below) | docs/run_artifacts/blind_results_2026-11-19_submitted.json, run_log_blind_2026-11-19_submitted.txt, pipeline_commit_2026-11-19_submitted.txt (git 7ed21d4) |
 | C — reproducibility re-run | 2026-11-19 19:34 | b9aad8a + figure-folder fix | re-run after the blind run was given its own figure folder (ledger entry 8) | outputs/ (current working files) |
 | D — diagnostic re-run | 2026-11-19 19:40 | 03e5e8f | re-run after the eta sweep also started recording max abs(m) (a diagnostic field only) | outputs/ (current working files) |
+| E — figure re-run | 2026-11-19 19:47 | 194418f | wrapped a clipped axis title in the map figure; no data change | outputs/ (current working files) |
 
 All four runs: exit status 0, "all built-in checks passed", same command.
 The logs and the commit id were written by the pipeline itself, not retyped.
