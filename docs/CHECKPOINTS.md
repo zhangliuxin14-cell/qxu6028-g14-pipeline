@@ -61,6 +61,20 @@ Checks performed:
 - a fresh clone of the repository run from scratch;
 - the report word count and the section limits.
 
+## Session 5 - 2026-11-23: independent verification and the unit audit
+
+| | |
+|---|---|
+| Commits | 43185d8 (gradient unit), 78cd039 (regenerated outputs), the commit that adds tools/verify_independent.py and docs/VERIFICATION.md |
+| Deliverables | an independent re-derivation for both datasets, the corrected gradient fields, this record |
+
+Checks performed:
+
+- every L1, L2 and L3 number re-derived without importing src/ (agreement: L1 to 1e-5, L2 replica to 1e-8, L3 to machine precision);
+- the September working copy compared with the re-derivation (L1 correct; L2 decision correct; L3 reconstruction exact but resolution reported in map cells and eta left at eta0);
+- the L3 gradient refitted on map indices and converted to probe pitches, which is how the unit error was found;
+- both datasets regenerated after the fix; the JSON diff contains only the gradient fields and pipeline_commit.
+
 ## Evidence map
 
 | Evidence | Where |
@@ -70,3 +84,4 @@ Checks performed:
 | Session 4 consolidation | outputs/run_log.txt, outputs/run_log_blind.txt, outputs/run_manifest*.json |
 | Blind run | docs/BLIND_HISTORY.md, outputs/pipeline_commit.txt |
 | AI use | docs/AI_usage_log.md, docs/AI_error_ledger.md |
+| Independent re-derivation | tools/verify_independent.py, docs/VERIFICATION.md |

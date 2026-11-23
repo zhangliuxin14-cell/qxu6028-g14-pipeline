@@ -105,7 +105,7 @@ so a silent regression cannot pass unnoticed.
 | L2 residual | 0.0140 on the guide's 400-point grid; 0.0058 after mesh refinement (0.43 x the repeat noise) |
 | L2 Fermi-level path | -0.068 -> +0.146 eV, neutrality between index 17 and 18 |
 | L3 decision | fail (clear): max\|m\| = 0.0456 > 0.030 |
-| L3 wafer-scale gradient | 6.03e-3 per probe pitch |
+| L3 wafer-scale gradient | 1.01e-2 per probe pitch; the fitted plane reaches 3.8% at a corner |
 | L3 local features | +0.0179 at (+0.3, +1.5); -0.0142 at (-0.9, -0.9) |
 | L3 regularisation | 5.7e-2 x η₀ (discrepancy principle) |
 | L3 resolution | 1.80 probe pitches |

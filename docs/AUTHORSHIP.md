@@ -33,6 +33,16 @@ happened, and this document plus the commit messages carry the attribution.
 | 8eb5923 | 2026-11-19 19:28 | Jiale Zhang | outputs regenerated |
 | d41ce42 | 2026-11-19 19:30 | Jiale Zhang | interior-only feature rule |
 | 7ed21d4 | 2026-11-19 19:30 | Jiale Zhang | outputs regenerated again |
+| b9aad8a | 2026-11-19 19:34 | Jiale Zhang | authorship, checkpoints, blind-test protocol |
+| 1f37ab8 | 2026-11-19 19:40 | Jiale Zhang | map amplitude recorded at every eta |
+| 03e5e8f | 2026-11-19 19:42 | Jiale Zhang | --check writes its own transcript |
+| 1a89619 | 2026-11-19 19:45 | Jiale Zhang | outputs for the eta-amplitude record |
+| 194418f | 2026-11-19 19:50 | Jiale Zhang | map title wrap |
+| 2fd2e10 | 2026-11-19 19:52 | Jiale Zhang | map figures regenerated |
+| 2f3883c | 2026-11-19 19:54 | Jiale Zhang | run E recorded |
+| f42a062 | 2026-11-19 20:10 | Jiale Zhang | claims the repository cannot support removed |
+| 43185d8 | 2026-11-23 | Jiale Zhang | L3 gradient measured in probe pitches (unit fix) |
+| 78cd039 | 2026-11-23 | Jiale Zhang | outputs regenerated from 43185d8 |
 
 ## What the history does not show
 

@@ -2,7 +2,7 @@
 
 Brief requirement: at least one specific, verifiable error in AI-generated work,
 with how it was detected and corrected. A generic "the AI can be wrong" entry
-scores nothing; the entries below are the eight that actually happened, in the
+scores nothing; the entries below are the nine that actually happened, in the
 order they happened. Every number can be reproduced with the pipeline command
 given in the entry, and every fix is guarded by a check in reproduce.py
 _validate() so that the same mistake cannot silently return.
@@ -107,6 +107,20 @@ _validate() so that the same mistake cannot silently return.
 | Why it is the same bug as entry 7 | Same mechanism one level down: a module-level constant bound at import, rebound at run time, and no check that the artefact came from the run that produced the JSON. Entry 7 was found by comparing two datasets; this one survived that comparison because only the figures collided, not the numbers. |
 | Correction | common.figure_path(name) resolves FIG_DIR at call time; run() sets common.FIG_DIR to outputs/figures or outputs/figures_blind; the blind figures are committed separately; and _validate now fails if any recorded figure path is not under the folder of the dataset that was run. |
 | Evidence that no number moved | Re-running both datasets after the fix changes pipeline_commit and six figure-path strings in the blind _meta, and pipeline_commit only in the regular results. git diff 7ed21d4 -- outputs/ shows exactly that. The reported physics is untouched; the provenance of the pictures is now correct. |
+
+---
+
+## Entry 9 — L3: a gradient quoted in the wrong unit
+
+| | |
+|---|---|
+| Date | 2026-11-23 (Session 5) |
+| Stage | L3 wafer-trend reporting, src/l3.py _ramp_detrend |
+| AI output | The planar trend was fitted on map indices 0..9, so the slope is per map cell (0.6 probe pitch), but the field was named wafer_gradient_*_per_pitch and the report multiplied the per-cell number by the corner offset in cells and quoted 6.04e-3 per pitch, spanning "about 2.7%" from the centre to a corner. |
+| Why it is wrong | Unit mismatch. 0.003308 per cell divided by 0.6 pitch per cell is 0.005514 per pitch; the two components combine to 0.010075 per pitch. Evaluated at the far corner the fitted plane reaches 0.037654, i.e. 3.8% of the reference conductivity, not 2.7%. The size matters: 3.8% is already above the 3.0% specification on its own, before any local defect is counted. |
+| Detection | Independent re-derivation from outputs/results.json: refit the plane to the 100 map values, convert the slope with the known pixel pitch, and compare with _meta. The checks written for the fix recompute both relations, and the report and explainer were re-read against those numbers. |
+| Correction | _ramp_detrend divides the fitted slopes by MAP_STEP and also returns the corner trend; _meta keeps the raw per-cell slopes as *_per_map_step, adds wafer_trend_at_corner, and _validate asserts both relations. The map, its features and the fail verdict are unchanged: git diff 78cd039^ -- outputs/ shows only the gradient fields. |
+| Second-order effect | The two local features are unchanged (+0.0179 and -0.0142), so the split is a 3.8% trend plus 0.8-1.8% local defects, and the ratio between absolute and defect-only readings is 2.55 (0.0456 / 0.0179), not the 2.5 quoted before. |
 
 ---
 

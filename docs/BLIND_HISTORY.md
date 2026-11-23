@@ -89,3 +89,12 @@ what the rule did rather than take our word for it.
 
 A strict freeze would have introduced the rule before the first look, so it is
 disclosed here rather than presented as pre-registered.
+
+## What run F changed relative to run E
+
+One bookkeeping field, no physics. The L3 wafer-gradient fields were fitted on
+map cells but named "per_pitch"; dividing by the 0.6-pitch cell gives
+0.0101 per probe pitch and a corner trend of 3.8% (ledger entry 9). The map,
+the features, the resolution, the detection limit and the verdict are unchanged;
+only the two gradient components, their magnitude and
+`wafer_trend_at_corner` move. The submitted blind artefacts remain run B/C.

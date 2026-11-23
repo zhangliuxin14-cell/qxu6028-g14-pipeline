@@ -49,15 +49,30 @@ commit history.
 | What we rejected | The first blind run's output, which was a silent copy of the regular numbers; a first attempt at splitting the run log that crashed on Windows console encoding; an early version of the manifest that was overwritten by the blind run |
 | Recorded in | commits fa4d1d0, 2204f04, 9f10e43, 50ff23e, f536ce8, 8eb5923, ledger entries 6 and 7 |
 
-## 4. What was not AI-generated
+## 4. Session 5 — independent verification, unit correction and the journal-format report
+
+| | |
+|---|---|
+| Date | 2026-11-23 |
+| Member | Jiale Zhang |
+| Tool | DeepSeek Harness coding agent (DeepSeek model, local session) |
+| Purpose | Re-derive L1, L2 and L3 from the raw data without reusing src/, find why one reported L3 number did not survive that check, rebuild the report in the course journal template, and rewrite the internal explainer for a reader with no AI-for-science background |
+| What the AI produced | tools/verify_independent.py and docs/VERIFICATION.md; the L3 gradient-unit fix and its guards; the rho-class report and its bibliography; the rewritten explainer; refreshed working-record tables |
+| What we checked before accepting | Every re-derived number compared with outputs/results.json; both datasets rerun after the fix and diffed field by field; the unit conversion repeated by hand (0.003308 / 0.6 = 0.005514); the report compiled with no errors and no overfull boxes; every figure cited before it appears |
+| What we rejected | A first suggestion to present the 400-point gap fit as a genuine improvement (it is a grid artefact, ledger entry 4); the minted code-listing package, which needs pygmentize that this TeX installation lacks, so the template is used without it |
+| Recorded in | commits 43185d8 (unit fix), 78cd039 (regenerated outputs); report and explainer are submitted outside the repository |
+
+## 5. What was not AI-generated
 
 The group chose the questions to ask, decided which model forms were physically
-acceptable, checked every number that appears in the report, ran the checks in
-Section 3 by hand, and wrote the contribution statement and this log. The AI
-never had access to the blind results at the time the analysis choices for L1-L3
-were frozen, and the blind run uses the identical code path.
+acceptable, and checked every number that appears in the report against the JSON
+and the code. This log and the contribution statement were drafted by the AI
+from the group's records and then read line by line by Jiale Zhang; they are not
+claimed as hand-written. The AI never had access to the blind results at the time
+the analysis choices for L1-L3 were frozen, and the blind run uses the identical
+code path.
 
-## 5. Declaration
+## 6. Declaration
 
 No AI output was submitted without a check recorded here or in the error
 ledger. Where an AI output was wrong, the error, the detection and the
