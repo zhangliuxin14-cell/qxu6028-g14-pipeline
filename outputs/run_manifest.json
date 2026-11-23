@@ -1,8 +1,8 @@
 {
-  "generated_utc": "2026-11-19T11:43:57+00:00",
+  "generated_utc": "2026-11-23T14:11:55+00:00",
   "dataset": "regular",
   "data_dir": "data/regular_G14",
-  "pipeline_commit": "194418f6694828f2886fe6ece5af4f17f066d8c9",
+  "pipeline_commit": "43185d819f15a7a7c65bc0e53fa7a7ffe0916e46",
   "pipeline_version": "QXU6028-G14-pipeline-v1.0",
   "python": "3.12.14",
   "numpy": "2.3.5",

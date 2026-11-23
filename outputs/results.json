@@ -2,7 +2,7 @@
   "schema_version": "QXU6028-results-v1",
   "group": "G14",
   "dataset_set": "regular",
-  "pipeline_commit": "194418f6694828f2886fe6ece5af4f17f066d8c9",
+  "pipeline_commit": "43185d819f15a7a7c65bc0e53fa7a7ffe0916e46",
   "L1": {
     "correction_factor": 2.86721174956921,
     "n_fermi_op_cm2": 372665164811.7486,
@@ -562,9 +562,12 @@
           "max_abs_map": 0.03795134231228946
         }
       ],
-      "wafer_gradient_x_per_pitch": -0.0033081593288716536,
-      "wafer_gradient_y_per_pitch": -0.005059311200181487,
-      "wafer_gradient_magnitude": 0.006044877828830157,
+      "wafer_gradient_x_per_pitch": -0.005513598881452755,
+      "wafer_gradient_y_per_pitch": -0.00843218533363581,
+      "wafer_gradient_x_per_map_step": -0.0033081593288716536,
+      "wafer_gradient_y_per_map_step": -0.005059311200181486,
+      "wafer_gradient_magnitude": 0.010074796381383592,
+      "wafer_trend_at_corner": 0.03765361738073915,
       "raw_global_extrema": [
         {
           "sign": "positive",
