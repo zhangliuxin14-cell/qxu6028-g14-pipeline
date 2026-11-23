@@ -200,6 +200,25 @@ def _validate(out):
                    min(s["residual_over_noise"] for s in _l3m["eta_sensitivity"]) <= 1.0
                    <= max(s["residual_over_noise"] for s in _l3m["eta_sensitivity"])))
 
+    # L3 gradient units: the plane is fitted on map indices, so the raw slopes
+    # are per map cell. The metadata must divide by the cell size (the pixel
+    # centres span 2.7 pitches either side of the centre) before calling the
+    # result "per pitch", and the corner trend must be the fitted plane
+    # evaluated at the far corner -- that is the number the 3% spec sees.
+    _span = 5.4
+    _step = _span / (_l3m["npix"] - 1)
+    _yy, _xx = np.meshgrid(np.arange(_l3m["npix"]), np.arange(_l3m["npix"]),
+                           indexing="ij")
+    _X = np.column_stack([np.ones(_l3m["npix"] ** 2), _xx.ravel(), _yy.ravel()])
+    _coef, *_ = np.linalg.lstsq(_X, m, rcond=None)
+    checks.append(("L3 gradient is per probe pitch, not per map cell",
+                   abs(_coef[1] - _l3m["wafer_gradient_x_per_pitch"] * _step) < 1e-12
+                   and abs(_coef[2] - _l3m["wafer_gradient_y_per_pitch"] * _step) < 1e-12))
+    checks.append(("L3 corner trend matches the fitted plane",
+                   abs(abs(_coef[0] + _coef[1] * (_l3m["npix"] - 1)
+                           + _coef[2] * (_l3m["npix"] - 1))
+                       - _l3m["wafer_trend_at_corner"]) < 1e-12))
+
     checks.append(("dataset_set matches the requested dataset",
                    out.get("dataset_set") in ("regular", "blind")))
 

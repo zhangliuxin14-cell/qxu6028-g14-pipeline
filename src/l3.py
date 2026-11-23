@@ -20,6 +20,7 @@ from .common import OUTPUT_DIR
 NPIX = 10
 N = NPIX * NPIX
 PIXEL_CENTRES = np.linspace(-2.7, 2.7, NPIX)  # probe-pitch units
+MAP_STEP = float(PIXEL_CENTRES[1] - PIXEL_CENTRES[0])  # probe pitch per map cell
 
 # specification announced at the start of Session 3 (slides p.15):
 # PASS when max|m| <= 0.030 (3.0% of the reference conductivity)
@@ -102,7 +103,7 @@ def _fwhm_positive_lobe(q_hat: np.ndarray, centre_idx: int) -> float:
     return 2.355 * np.sqrt(sigma2)
 
 
-def _ramp_detrend(m: np.ndarray) -> Tuple[np.ndarray, float, float]:
+def _ramp_detrend(m: np.ndarray) -> Tuple[np.ndarray, float, float, float]:
     """Remove the best-fit planar (wafer-scale) trend from a flat map.
 
     A single-crystal wafer usually shows a smooth process gradient across the
@@ -113,13 +114,20 @@ def _ramp_detrend(m: np.ndarray) -> Tuple[np.ndarray, float, float]:
     is defined through a localised point spread. Subtracting the planar trend
     makes the localised features the extrema.
 
-    Returns the detrended map plus the fitted gradients in probe pitches.
+    The fit is done on map indices, so the raw slope is per map cell; the
+    returned gradients are divided by MAP_STEP so they are per probe pitch.
+    The fitted trend at the far corner is returned as a fraction of the
+    reference conductivity, because that is the number the specification is
+    compared against.
+
+    Returns (detrended map, grad_x per pitch, grad_y per pitch, |trend| at corner).
     """
     yy, xx = np.meshgrid(np.arange(NPIX), np.arange(NPIX), indexing="ij")
     X = np.column_stack([np.ones(N), xx.ravel(), yy.ravel()])
     coef, *_ = np.linalg.lstsq(X, m, rcond=None)
     ramp = X @ coef
-    return m - ramp, float(coef[1]), float(coef[2])
+    corner = abs(float(coef[0] + coef[1] * (NPIX - 1) + coef[2] * (NPIX - 1)))
+    return (m - ramp, float(coef[1]) / MAP_STEP, float(coef[2]) / MAP_STEP, corner)
 
 
 def _merge_features(m: np.ndarray) -> List[Dict]:
@@ -260,7 +268,7 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
     # The planar trend is the wafer-scale process gradient: its extrema always
     # sit on the map boundary, so it cannot be a "feature". The guide asks for
     # defects, so features are taken from the detrended map.
-    det_flat, grad_x, grad_y = _ramp_detrend(mhat.ravel())
+    det_flat, grad_x, grad_y, corner_trend = _ramp_detrend(mhat.ravel())
     det = det_flat.reshape(NPIX, NPIX)
     features = _merge_features(det)
     global_extrema = _merge_features_global_extrema(mhat)
@@ -406,7 +414,10 @@ def run_l3(noise_seed: int = 20260921, n_noise: int = 500) -> Dict:
         "eta_sensitivity": sens,
         "wafer_gradient_x_per_pitch": grad_x,
         "wafer_gradient_y_per_pitch": grad_y,
+        "wafer_gradient_x_per_map_step": grad_x * MAP_STEP,
+        "wafer_gradient_y_per_map_step": grad_y * MAP_STEP,
         "wafer_gradient_magnitude": float(np.hypot(grad_x, grad_y)),
+        "wafer_trend_at_corner": corner_trend,
         "raw_global_extrema": global_extrema,
         "detrended_feature_peak_abs": float(np.max(np.abs(det))),
         "features_all_interior": bool(features_interior),
