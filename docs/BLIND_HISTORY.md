@@ -21,13 +21,14 @@ outputs/run_manifest_blind.json, outputs/figures_blind/ and outputs/pipeline_com
 | C — reproducibility re-run | 2026-11-19 19:34 | b9aad8a + figure-folder fix | re-run after the blind run was given its own figure folder (ledger entry 8) | outputs/ (current working files) |
 | D — diagnostic re-run | 2026-11-19 19:40 | 03e5e8f | re-run after the eta sweep also started recording max abs(m) (a diagnostic field only) | outputs/ (current working files) |
 | E — figure re-run | 2026-11-19 19:47 | 194418f | wrapped a clipped axis title in the map figure; no data change | outputs/ (current working files) |
+| F — unit correction | 2026-11-23 22:11 | 43185d8 | corrected the L3 gradient units and regenerated every output; no change to the map, features, resolution, detection limit or verdict | outputs/blind_results.json, outputs/run_log_blind.txt and outputs/pipeline_commit.txt (the hand-in copies are G14_blind_results.json, G14_blind_run_log.txt and G14_blind_pipeline_commit.txt) |
 
-All five runs: exit status 0, "all built-in checks passed", same command.
+All six runs: exit status 0, "all built-in checks passed", same command.
 The logs and the commit id were written by the pipeline itself, not retyped.
 
 ## Results
 
-Values below are from run D. Runs B to E give the same numbers except for the
+Values below are from run D. Runs B to F give the same numbers except for the
 second L3 feature, which is the one item affected by the disclosed change.
 
 | Quantity | Blind value |
@@ -97,4 +98,6 @@ map cells but named "per_pitch"; dividing by the 0.6-pitch cell gives
 0.0101 per probe pitch and a corner trend of 3.8% (ledger entry 9). The map,
 the features, the resolution, the detection limit and the verdict are unchanged;
 only the two gradient components, their magnitude and
-`wafer_trend_at_corner` move. The submitted blind artefacts remain run B/C.
+`wafer_trend_at_corner` move. The submitted blind artefacts are run F
+(pipeline commit 43185d8); runs B and C are retained in docs/run_artifacts so
+the earlier numbers can still be checked.

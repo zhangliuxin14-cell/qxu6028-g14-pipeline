@@ -62,7 +62,20 @@ commit history.
 | What we rejected | A first suggestion to present the 400-point gap fit as a genuine improvement (it is a grid artefact, ledger entry 4); the minted code-listing package, which needs pygmentize that this TeX installation lacks, so the template is used without it |
 | Recorded in | commits 43185d8 (unit fix), 78cd039 (regenerated outputs); report and explainer are submitted outside the repository |
 
-## 5. What was not AI-generated
+## 5. Session 6 — independent final review (Haoming Chen and Youshan Dai)
+
+| | |
+|---|---|
+| Date | 2026-11-24 |
+| Members | Haoming Chen and Youshan Dai |
+| Tool | each member's own AI assistant (model names not recorded in the review notes) |
+| Purpose | independent final review of the draft report and of the reported L1-L3 values |
+| What was asked | check the reported numbers and the wording against results.json and the repository, and return any discrepancy to Jiale Zhang |
+| What the AI produced | review findings; no code change and no repository commit |
+| What we checked before accepting | Jiale Zhang re-checked each finding against results.json, the code and the figures before accepting any correction; the members' review notes and assistant transcripts are held by the members and available on request |
+| Recorded in | contribution statement, Session 6 |
+
+## 6. What was not AI-generated
 
 The group chose the questions to ask, decided which model forms were physically
 acceptable, and checked every number that appears in the report against the JSON
@@ -72,7 +85,7 @@ claimed as hand-written. The AI never had access to the blind results at the tim
 the analysis choices for L1-L3 were frozen, and the blind run uses the identical
 code path.
 
-## 6. Declaration
+## 7. Declaration
 
 No AI output was submitted without a check recorded here or in the error
 ledger. Where an AI output was wrong, the error, the detection and the
