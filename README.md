@@ -50,7 +50,7 @@ g14_pipeline/
 │   ├── l2.py               # L2 zero-dimensional inverse problem + bootstrap
 │   └── l3.py               # L3 regularised 2-D reconstruction
 ├── outputs/                # results, logs, figures (regenerated, not hand-edited)
-├── checkpoints/            # L1 checkpoint package submitted in Session 3
+├── checkpoints/            # L1 checkpoint package submitted in Session 2
 ├── tools/contribution_report.py   # git-log based contribution table
 └── docs/                   # checkpoints, AI records, authorship, blind run record
 ```

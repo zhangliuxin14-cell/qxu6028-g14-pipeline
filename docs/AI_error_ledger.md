@@ -120,7 +120,7 @@ _validate() so that the same mistake cannot silently return.
 | Why it is wrong | Unit mismatch. 0.003308 per cell divided by 0.6 pitch per cell is 0.005514 per pitch; the two components combine to 0.010075 per pitch. Evaluated at the far corner the fitted plane reaches 0.037654, i.e. 3.8% of the reference conductivity, not 2.7%. The size matters: 3.8% is already above the 3.0% specification on its own, before any local defect is counted. |
 | Detection | Independent re-derivation from outputs/results.json: refit the plane to the 100 map values, convert the slope with the known pixel pitch, and compare with _meta. The checks written for the fix recompute both relations, and the report and explainer were re-read against those numbers. |
 | Correction | _ramp_detrend divides the fitted slopes by MAP_STEP and also returns the corner trend; _meta keeps the raw per-cell slopes as *_per_map_step, adds wafer_trend_at_corner, and _validate asserts both relations. The map, its features and the fail verdict are unchanged: git diff 78cd039^ -- outputs/ shows only the gradient fields. |
-| Second-order effect | The two local features are unchanged (+0.0179 and -0.0142), so the split is a 3.8% trend plus 0.8-1.8% local defects, and the ratio between absolute and defect-only readings is 2.55 (0.0456 / 0.0179), not the 2.5 quoted before. |
+| Second-order effect | The two local features are unchanged (+0.0179 and -0.0142), so the split is a 3.8% trend plus 1.4-1.8% local defects, and the ratio between absolute and defect-only readings is 2.55 (0.0456 / 0.0179); the report rounds this to 2.5. |
 
 ---
 

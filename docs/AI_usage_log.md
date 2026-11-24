@@ -45,7 +45,7 @@ commit history.
 | Tool | DeepSeek Harness coding agent (DeepSeek model, agent mode in a local session) |
 | Purpose | Turn the working copy into a repository that a marker can run: fix the two data-path bugs, add the dataset selector, run log, run manifest and --check mode, regenerate every output, write the authoring records, and draft the report |
 | What the AI produced | The reproduce.py CLI, the DATA_DIR and results-template fixes, the run manifest and log capture, the checks added to _validate(), the English README, this log and the error ledger, docs/AUTHORSHIP.md, docs/BLIND_HISTORY.md, docs/CHECKPOINTS.md, tools/contribution_report.py, the report draft and the figures for it |
-| What we checked before accepting | Both datasets run end to end and exit 0; --check exits 0; every number in the report traced back to a key in results.json; the blind output compared with the regular output (this comparison is what caught ledger entry 7); a clean clone of the repository run from scratch; the word count of the report |
+| What we checked before accepting | Both datasets run end to end and exit 0; --check exits 0; every reported result traceable to a key in results.json or blind_results.json; the blind output compared with the regular output (this comparison is what caught ledger entry 7); a clean clone of the repository run from scratch; the word count of the report |
 | What we rejected | The first blind run's output, which was a silent copy of the regular numbers; a first attempt at splitting the run log that crashed on Windows console encoding; an early version of the manifest that was overwritten by the blind run |
 | Recorded in | commits fa4d1d0, 2204f04, 9f10e43, 50ff23e, f536ce8, 8eb5923, ledger entries 6 and 7 |
 

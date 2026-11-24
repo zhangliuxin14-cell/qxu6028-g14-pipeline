@@ -33,7 +33,7 @@ Checks performed before submitting the checkpoint:
 | | |
 |---|---|
 | Deliverable | brief notes for L2 and L3, the six figures, results.json |
-| Recorded in | docs/brief_note_L2.md, docs/brief_note_L3.md, docs/run_artifacts/check_out_2026-09-21.txt, commit 93102f0 (the working copy was committed to the shared repository in Session 4) |
+| Recorded in | L1: docs/run_artifacts/check_out_2026-09-21.txt. L2/L3: docs/brief_note_L2.md, docs/brief_note_L3.md, outputs/figures. The shared import commit 93102f0 (2026-11-19) brought Zijian Zhou's working copy into this repository; its date is not the 2026-09-23 checkpoint date. |
 
 Checks performed:
 
@@ -59,7 +59,7 @@ Checks performed:
 - both datasets run end to end from a clean copy and exit 0;
 - reproduce.py --check exits 0;
 - the blind output compared with the regular output, which is how ledger entry 7 was found;
-- every number in the report traced back to a key in results.json;
+- every reported result traceable to a key in results.json or blind_results.json;
 - a fresh clone of the repository run from scratch;
 - the report word count and the section limits.
 
