@@ -12,6 +12,10 @@ change between the two runs is the dataset selector:
 which reads data/blind_G14, writes outputs/blind_results.json, outputs/run_log_blind.txt,
 outputs/run_manifest_blind.json, outputs/figures_blind/ and outputs/pipeline_commit.txt.
 
+## Session 3 live attempt — discarded
+
+The group made a live blind-test attempt during the Session 3 live session. The data and method used at the time were judged unreliable, so the result was discarded and none of it was adopted. No number in this repository comes from that attempt, and no artifact from it is presented as the submitted blind result. The adopted blind test is the frozen-pipeline run on the released blind_G14 pack recorded below (runs A-F, 2026-11-19 to 2026-11-23; the hand-in files are run F).
+
 ## Runs
 
 | Run | When (+0800) | Code commit | Why it was run | Retained as |
@@ -28,8 +32,9 @@ The logs and the commit id were written by the pipeline itself, not retyped.
 
 ## Results
 
-Values below are from run D. Runs B to F give the same numbers except for the
-second L3 feature, which is the one item affected by the disclosed change.
+Values below are from run D. Runs B to E give the same numbers except for the
+second L3 feature, which is the one item affected by the disclosed change; run F
+reproduces these values and adds the corrected gradient fields.
 
 | Quantity | Blind value |
 |---|---|

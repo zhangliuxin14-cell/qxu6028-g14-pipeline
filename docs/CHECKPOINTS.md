@@ -45,7 +45,9 @@ Checks performed:
 - L3 features taken from the detrended map, so that a boundary extremum cannot be reported as a defect (ledger entry 5);
 - the pass/fail threshold read back from the brief: max abs(m) <= 0.030.
 
-## Session 4 — 2026-11-19: consolidation and blind test
+The group also made a live blind-test attempt during the Session 3 live session. The data and method used at the time were judged unreliable, so the attempt was discarded and no result from it was adopted. It is not used in any number in this repository and no artifact from it is presented as the submitted blind result. The adopted blind test is the frozen-pipeline run on the released blind_G14 pack recorded in docs/BLIND_HISTORY.md (2026-11-19 to 2026-11-23).
+
+## Session 4 — 2026-11-19: consolidation and adopted blind test
 
 | | |
 |---|---|

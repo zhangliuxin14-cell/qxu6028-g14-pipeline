@@ -1,61 +1,65 @@
-# L2 Checkpoint 简要记录 — G14
+# L2 checkpoint note — G14
 
-**问题**：材料是无能隙还是有硬能隙？能隙多大？费米能级在测量序列中如何漂移？
+**Question.** Is the material gapless or does it have a hard gap, how large is the gap, and how does the Fermi level drift across the measurement series?
 
-## 方法
+## Method
 
-- 51 个测量索引 × 3 次重复 (R_H, R_xx)。按索引平均得中心估计，保留重复间标准差。
-- **门检**：R_H 符号翻转定位中性点 → index 17（+4.48×10⁻¹³）→ index 18（−2.32×10⁻¹⁴）。
-- R_H 与 R_xx **分别归一化**（各除以自己的最大绝对值），保留 R_H 符号。
-- 模型库：理想锥 g=c|E|；硬带隙 g=0（|E|≤E_g/2），g=c(|E|−E_g/2)（外）。E 网格 −2.5~2.5 eV（4000 点），E_F 网格 −8~+9 k_BT（400 点），E_g/k_BT = 0.5~8.0（步长 0.25）。
-- 输运代理（等迁移率双载流子，e=μ=1，固定尺度在分别归一化时抵消）：
-  σ_xx = n+p → R_s = 1/(n+p)；σ_xy = B(p−n) → **R_H = (p−n)/(n+p)²**。
-  该形式使 R_H 在中性点**过零且有界**，满足指南的 orientation check（模型曲线须连续穿过 R_H 符号变化）与手册 L2 GATE（归一化后 R_H 仍须在中性点过零；理想锥翼部 |R_H| ∝ R_xx²，实测模型翼部 |R_H|/R_xx² = 1.52 ± 0.08，与数据的 1.3–1.7 同量级）。
-- 拟合：二维归一化对空间中的最近曲线点 → 每个测量对分配 E_F。
-- 选择规则：仅当 r_gap < 0.85·r_cone 且 E_g ≥ 1 k_BT 才选硬带隙，否则选 cone（E_g=0）。
-- 不确定性：200 次 bootstrap（种子 20260921，每次随机挑 1/3 重复），报告 16–84 百分位。
+- 51 measurement indices, three repeats each (R_H, R_xx). The three repeats are averaged per index and the repeat standard deviation is retained.
+- **Gate check.** The sign change of R_H locates the neutrality point: index 17 (+4.48e-13) to index 18 (-2.32e-14).
+- R_H and R_xx are normalised independently, each by its own maximum absolute value. The sign of R_H is retained.
+- Model library: an ideal cone g = c|E|; a hard gap with g = 0 for |E| <= E_g/2 and g = c(|E| - E_g/2) outside. Energy grid -2.5 to 2.5 eV (4000 points); E_F grid -8 to +9 k_BT (400 points); E_g/k_BT = 0.5 to 8.0 in steps of 0.25.
+- Transport proxies for two carriers with equal mobility, e = mu = 1 (the common scale cancels because each axis is normalised separately):
 
-## 结果
+  sigma_xx = n + p, so R_s = 1/(n + p); sigma_xy = B(p - n), so **R_H = (p - n)/(n + p)^2**.
 
-- **模型：cone（无能隙），E_g = 0 k_BT**
-- r_cone = **0.01396**；最优硬带隙候选 E_g = 0.50 k_BT 的 r_gap = **0.01362**，未低于 0.85·r_cone = 0.01187 → 15% 规则不满足，选 cone。
-- **残差远低于噪声，模型无系统偏差**：r_cone = 0.01396（指南 400 点网格）。但这个数值**不等于**模型失配——网格收敛测试（见下节）给出 r_cone = **0.00580**，即真实模型-数据距离只有重复散度 0.01350 的 **0.43 倍**，模型完全落在测量噪声之内。所有 51 个索引上模型与数据的 R_H 符号一致。
-- Bootstrap：**1/200**（0.01）次选出硬带隙 → 模型决策置信度高；E_g 的中位数 0.00 k_BT，16–84 百分位 [0.00, 0.00] k_BT。
-- 费米轨迹：从 **−0.068 eV**（index 0，p 型，R_H > 0）漂移到 **+0.146 eV**（index 49，n 型，R_H < 0），在 index 17–18 之间跨过中性点并保持测量顺序；51 个索引轨迹长度正确。50 个步长中 41 步上升、5 步持平、4 步小幅回落，最大回落 0.0099 eV 与其 bootstrap 16–84 带宽（0.0099 eV）同量级，即轨迹在噪声范围内单调漂移。
-- 中性点：R_H 在 index 17（+4.48×10⁻¹³）→ index 18（−2.32×10⁻¹⁴）之间翻转；R_xx 恰在此处取全局极大（5.775×10⁻¹²，index 18）——这是中性点定位的独立佐证。
+  This form makes R_H pass through zero at neutrality and stay bounded. It satisfies the guide's orientation check (the model curve must cross the measured R_H sign change) and the handbook L2 gate (after normalisation R_H must still cross zero; in the guide's 4-9 kT wing window the ideal-cone wings obey |R_H| proportional to R_xx^2). The fitted model wings give |R_H|/R_xx^2 = 1.52 +/- 0.08, the same order as the measured 1.3-1.7.
+- Fit: nearest point on the model curve in the two-dimensional normalised pair space, which assigns an E_F to every measured pair.
+- Selection rule: choose a hard gap only if r_gap < 0.85 r_cone and E_g >= 1 k_BT; otherwise choose the cone (E_g = 0).
+- Uncertainty: 200 bootstrap resamples (seed 20260921, each draw takes one of the three repeats at every index), reported as the 16th-84th percentile.
 
-## 残差对比：能隙略小 / 略大都不改变结论
+## Result
 
-模型图（a）在归一化对空间叠出了能隙家族：**E_g = 0.25**（低于候选网格，仅作对比）、**0.50**（最优候选，即网格下界）、**0.75 k_BT**（下一档）。三条带隙曲线与锥曲线几乎重合——在坐标尺度上平均间距仅 0.02–0.07（约为坐标范围的 1–6%），说明本数据对带隙大小本身极不敏感。
+- **Model: cone (gapless), E_g = 0 k_BT.**
+- r_cone = **0.01396**; the best hard-gap candidate is E_g = 0.50 k_BT with r_gap = **0.01362**, which is not below 0.85 r_cone = 0.01187. The 15% rule therefore fails and the cone is selected.
+- **The residual is well below the noise, so the model has no systematic bias.** On the prescribed 400-point grid r_cone = 0.01396, but this number is not the model mismatch: the grid-convergence diagnostic gives r_cone = **0.00580**, so the true model-data distance is 0.43 times the repeat scatter of 0.01350. The model lies inside the measurement noise. The model and data have the same R_H sign at all 51 indices.
+- Bootstrap: **2/200 (0.01)** resamples select a hard gap, so the model decision is confident; the median E_g is 0.00 k_BT with a 16th-84th interval of [0.00, 0.00] k_BT.
+- Fermi trajectory: from **-0.068 eV** (index 0, p-type, R_H > 0) to **+0.146 eV** (index 49, n-type, R_H < 0), crossing neutrality between indices 17 and 18 and following the measurement order. The 51-index path has the correct length. Of the 50 steps, 41 rise, 5 are flat and 4 fall slightly; the largest fall is 0.0099 eV, the same size as its bootstrap 16th-84th band, so the path is monotonic within noise.
+- Neutrality: R_H flips between index 17 (+4.48e-13) and index 18 (-2.32e-14). R_xx has its global maximum at the same place (5.775e-12 at index 18), an independent confirmation of the neutrality point.
 
-因此在模型图（b）中直接画残差随带隙的走势：r_cone = 0.01396，带隙候选从 E_g = 0.50 k_BT 的 **0.01362** 单调恶化到 E_g = 8 k_BT 的 **0.12728**。
+## Residual comparison: a smaller or larger gap does not change the conclusion
 
-| E_g/k_BT | 0（锥） | 0.25† | **0.50** | 0.75 | 1.00 | 2.00 | 8.00 |
+The model figure (a) overlays three gap curves in the normalised pair space: E_g = 0.25 (below the candidate grid, for comparison only), 0.50 (the best candidate, the grid lower edge) and 0.75 k_BT (the next step). The three gap curves almost coincide with the cone; their mean separation is only 0.02-0.07 in coordinate units (about 1-6% of the range). The data are therefore very insensitive to the gap size near zero.
+
+Model figure (b) plots the residual against gap size: r_cone = 0.01396, and the candidates worsen monotonically from **0.01362** at E_g = 0.50 k_BT to **0.12728** at E_g = 8 k_BT.
+
+| E_g/k_BT | 0 (cone) | 0.25* | **0.50** | 0.75 | 1.00 | 2.00 | 8.00 |
 |---|---|---|---|---|---|---|---|
-| 残差 r | 0.01396 | 0.01313 | **0.01362** | 0.01737 | 0.02246 | 0.06755 | 0.12728 |
-| 相对锥的改善 | — | +6.0% | +2.5% | −24% | −61% | −384% | −811% |
+| Residual r | 0.01396 | 0.01313 | **0.01362** | 0.01737 | 0.02246 | 0.06755 | 0.12728 |
+| Improvement relative to cone | - | +6.0% | +2.5% | -24% | -61% | -384% | -811% |
 
-† 低于指南规定的候选网格（0.50–8.00 k_BT），仅用于展示"更小的带隙也不会改善"，**不参与选型**。
+*Below the guide's candidate grid (0.50-8.00 k_BT); shown only to demonstrate that a still smaller gap does not improve the fit. It does not enter the model selection.
 
-- **15% 规则阈值 = 0.85·r_cone = 0.01187**。全部 31 个候选带隙的残差都在阈值之上（最接近的是网格下界 0.50 k_BT，仅改善 2.5%）→ 按规则选 cone。
-- 关键论证：**即使把搜索范围放宽到网格下界以下的 0.25 k_BT，改善也只有 6.0%**，仍远达不到 15%。因此"选 cone"不是网格边界造成的假象，而是数据本身的结论。
-- 带隙越大残差越差，且在 E_g ≳ 3 k_BT 后趋于饱和（≈0.127）——这正是"曲线形状被硬能隙削平、无法再穿过数据点"的表现。
+- **The 15% threshold is 0.85 r_cone = 0.01187.** All 31 candidate gaps are above it; the closest is the grid lower edge at 0.50 k_BT, which improves the residual by only 2.5%. The rule therefore selects the cone.
+- The key argument: **even when the search is extended below the grid to 0.25 k_BT, the improvement is only 6.0%**, far short of 15%. The cone is therefore not an artefact of the grid boundary; it is the conclusion of the data.
+- The residual becomes worse as the gap grows and saturates above E_g of about 3 k_BT (near 0.127), because the hard gap flattens the curve so that it can no longer pass through the data points.
 
-## ⚠️ 网格伪影：为什么 0.25 的残差看起来比 0.50 低
+## Grid artefact: why the 0.25 k_BT residual looks lower than 0.50 k_BT
 
-上表中 400 点网格给出的排序是**非单调**的（0.25 的 0.01313 < 0.50 的 0.01362 < cone 的 0.01396），这不符合物理预期——把能隙连续缩到 0 应当连续过渡回 cone。追查后确认这是**候选 E_F 网格的量化伪影**：
+On the 400-point grid the ordering in the table is **non-monotonic** (0.25 gives 0.01313, 0.50 gives 0.01362 and the cone gives 0.01396), which is not physical: a gap shrinking continuously to zero should approach the cone continuously. The cause is **quantisation of the candidate E_F grid**.
 
-最近曲线拟合测的是到模型曲线**离散采样点**的距离，而模型曲线只在 400 个候选 E_F 上采样。这给每个残差加了一个量化地板（量级 ≈0.0127），而且地板高度随曲线不同而略有差异——某条带隙曲线的 400 个采样点恰好离数据点近一点，残差就"白赚"一点。把 E_F 网格加细即可消除。
+The nearest-curve fit measures the distance to the discrete sample points of the model curve, and the curve is sampled only at 400 candidate E_F values. This adds a quantisation floor of about 0.0127 to every residual. The floor differs slightly between curves, so a curve whose 400 samples happen to lie a little closer to the data gets an artificial improvement. Refining the E_F grid removes it.
 
-| 候选 E_F 网格 | r_cone | r(0.25) | r(0.50) | r(0.75) | 排序 |
+| Candidate E_F grid | r_cone | r(0.25) | r(0.50) | r(0.75) | Ordering |
 |---|---|---|---|---|---|
-| 400 点（指南规定，**用于报告**） | 0.01396 | 0.01313 | 0.01362 | 0.01737 | 非单调，cone 在其中 |
-| 6400 点（仅诊断） | **0.00580** | 0.00634 | 0.00759 | 0.01072 | **单调递增，cone 最低** |
+| 400 points (guide, **used for the report**) | 0.01396 | 0.01313 | 0.01362 | 0.01737 | non-monotonic; cone in the middle |
+| 6400 points (diagnostic only) | **0.00580** | 0.00634 | 0.00759 | 0.01072 | **monotonic; cone lowest** |
 
-- 加细后排序恢复物理预期（cone 最低、残差随能隙单调上升），说明 400 点下的"0.25 反常偏低"是**网格运气**而非真实的亚热激活能隙证据。逐点检查也支持这一点：0.25 相对 cone 在 51 个点中 **25 个改善、26 个变差**，基本是抛硬币，而非系统性的形状偏好。
-- 误差预算：400 点网格量化 ≈ **0.0127**，测量重复散度 = **0.01350**，真实模型-数据距离 = **0.00580**。即**报告的残差里，网格量化与测量噪声同量级，都不是模型失配**。
-- 因此本 checkpoint 的结论对**能隙能否分辨**的诚实表述是：E_g ≲ 1 k_BT 的范围内，残差差异（≤6%）既低于 15% 判据、又受网格量化污染，**不可作为能隙存在的证据**；只有 E_g ≳ 1 k_BT 时残差的显著恶化是稳健的。这与"亚热能隙无法与无能隙区分"的结论一致，但现在有了量化的边界。
+- After refinement the physical ordering returns: the cone is lowest and the residual rises with the gap. The low 0.25 value on the 400-point grid is therefore **grid luck**, not evidence for a sub-thermal gap. A point-by-point check supports this: relative to the cone, 0.25 improves 25 of the 51 points and worsens 26, essentially a coin toss rather than a systematic shape preference.
+- Error budget: the 400-point quantisation is about **0.0127**, the repeat scatter is **0.01350**, and the true model-data distance is **0.00580**. The reported residual is therefore dominated by grid quantisation and measurement noise, not by model mismatch.
+- The honest statement about gap resolution is therefore: for E_g below about 1 k_BT the residual differences (at most 6%) are both below the 15% rule and contaminated by quantisation, so they **cannot be used as evidence for a gap**; only the clear worsening for E_g above about 1 k_BT is robust. This is consistent with the conclusion that a sub-thermal gap cannot be distinguished from a gapless cone, now with a quantitative boundary.
 
-## 器件建议
+## Device advice
 
-材料表现为**无能隙（Dirac 锥）半导体**，E_F 可在 **−0.07 至 +0.15 eV** 范围内连续调控并跨过中性点——适合**传感器/连续可调器件**应用；不适合做高开关比逻辑开关（无带隙 → 无法关断）。注意：E_g 不确定度为 0 仅表示数据在 1 k_BT 分辨率下无法区分亚热激活能隙与零能隙，若存在 <1 k_BT 的能隙本实验无法分辨。
+The material behaves as a **gapless (Dirac-cone) semiconductor**. E_F can be tuned continuously from about -0.07 to +0.15 eV across neutrality, which suits **sensors and continuously tunable devices**; it is not suitable for a high-on/off-ratio logic switch, because a zero gap cannot be turned off. The zero gap uncertainty means only that the data cannot distinguish a sub-thermal gap from zero at the 1 k_BT resolution; a gap below 1 k_BT would not be resolved by this experiment.
+
+*English version of the 2026-09-23 checkpoint note; numbers unchanged.*

@@ -1,36 +1,38 @@
-# L1 Checkpoint 简要记录 — G14
+# L1 checkpoint note — G14
 
-**问题**：数据表使用教科书带边计数（从 E=0 积分）。在操作点处，这种提取方式使载流子密度、迁移率和传感器灵敏度错估多少？
+**Question.** The data sheet uses the textbook band-edge count (integration from E = 0). At the operating point, how much does this convention misstate the carrier density, the mobility and the sensor sensitivity?
 
-## 方法
+## Method
 
-- 线性 DoS g(E)=cE（c=0.038341 cm⁻²eV⁻²，由 `L1_params.json` 提供），T=300 K。
-- 带边计数 n_band：从 E=0 到 2.5 eV 积分 g(E)·f(E)。
-- 费米参考计数 n_Fermi：从 E=E_F 到 2.5 eV 积分（20001 点，`np.trapezoid`）。
-- 修正因子 C(E_F) = n_band / n_Fermi。
-- 操作点 E_F,op = 0.1115 eV（精确值，非最近 CSV 行），ρ = 437.93 Ω/sq。
-- 修正迁移率 μ = 1/(e·n_F·ρ)（单位已由 n[cm⁻²] 与 ρ[Ω/sq] 自动给出 cm²/Vs，未加 10⁴）。
+- Linear density of states g(E) = cE with c = 0.038341 cm^-2 eV^-2 from L1_params.json; T = 300 K.
+- Band-edge count n_band: integrate g(E) f(E) from E = 0 to 2.5 eV.
+- Fermi-referenced count n_Fermi: integrate g(E) f(E) from E = E_F to 2.5 eV (20001 points, np.trapezoid).
+- Correction factor C(E_F) = n_band / n_Fermi.
+- Operating point E_F,op = 0.1115 eV (the exact value, not the nearest CSV row); rho = 437.93 ohm/sq.
+- Corrected mobility mu = 1 / (e n_F rho). The units follow directly from n in cm^-2 and rho in ohm/sq and give cm^2 V^-1 s^-1; no factor of 10^4 is applied.
 
-## 参考检查（全部通过）
+## Reference checks (all pass)
 
-| E_F (eV) | n_band/n_Fermi | 期望 |
+| E_F (eV) | n_band / n_Fermi | Expected |
 |---|---|---|
 | 0.000 | 1.000 | 1.00 |
-| 0.073 | 2.005 | ≈2.00 |
-| 0.100 | 2.599 | ≈2.60 |
-| 0.200 | 5.104 | ≈5.10 |
+| 0.073 | 2.005 | about 2.00 |
+| 0.100 | 2.599 | about 2.60 |
+| 0.200 | 5.104 | about 5.10 |
 
-闭合形式与数值积分相对差 2.7×10⁻⁷，扫描单调递增。
+The closed form agrees with the numerical integral to 2.7e-7 relative, and the sweep is monotonic.
 
-## 结果
+## Result
 
-- 修正因子 C(E_F,op) = **2.867**
-- 修正载流子密度 n_F(E_F,op) = **3.727×10¹¹ cm⁻²**
-- 修正迁移率 μ_corr = **3.824×10⁴ cm²/Vs**（未修正 μ_band = 1.334×10⁴ cm²/Vs）
-- C=2 交叉于 E_F ≈ 0.0725 eV；C=4 交叉于 E_F ≈ 0.157 eV
+- Correction factor C(E_F,op) = **2.867**
+- Corrected carrier density n_F(E_F,op) = **3.727e11 cm^-2**
+- Corrected mobility mu_corr = **3.824e4 cm^2 V^-1 s^-1** (uncorrected mu_band = 1.334e4 cm^2 V^-1 s^-1)
+- C = 2 at E_F = 0.0725 eV; C = 4 at E_F = 0.157 eV
 
-## 物理解释与传感器建议
+## Physical interpretation and sensor advice
 
-C 随掺杂增长的原因：带边计数在 E=0 与 E_F 之间多计了一段被费米函数"填满"的状态（≈c·E_F·ln2·kT 量级），该段随 E_F 线性增大，而 n_F 本身在低掺杂区增长更快，故比值单调上升（C→∞ 于 E_F→0⁺，C→1 于深掺杂）。
+The band-edge count adds the filled states between E = 0 and E_F that the Fermi function has already occupied. Because n_F itself grows quickly at low doping, C is not simply a constant offset; it rises monotonically with E_F. At E_F -> 0+ the two integrals coincide and C -> 1. It does not diverge there. In this linear-DoS model C continues to grow at high E_F, roughly in proportion to E_F once E_F is much larger than kT.
 
-**量化建议**：若传感器灵敏度正比于载流子密度，沿用带边计数将使灵敏度在操作点被**低估 2.87 倍**（或迁移率高估同倍数）。在 E_F=0.11 eV 附近标定传感器时，必须改用费米参考计数，否则标定误差约 186%。
+**Quantitative advice.** At the operating point the band-edge count gives n_band = 2.867 n_F. A mobility inferred as 1 / (e n_band rho) is therefore **2.867 times too low** (1.334e4 instead of 3.824e4 cm^2 V^-1 s^-1). Conversely, if a sensor signal is taken to be proportional to n_band, it is **overestimated by 2.87**; the Fermi-referenced count is the correct one. Calibrating near E_F = 0.11 eV without the correction leaves an error of about 187%.
+
+*This English version replaces the Chinese checkpoint note. The numbers are unchanged; the direction of the mobility/sensitivity error and the C -> 1 limit were corrected during translation (the earlier Chinese note had them reversed).*
